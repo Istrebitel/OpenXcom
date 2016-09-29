@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,8 +17,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Bar.h"
-#include <cmath>
-#include "SDL.h"
+#include <SDL.h>
 
 namespace OpenXcom
 {
@@ -30,7 +29,7 @@ namespace OpenXcom
  * @param x X position in pixels.
  * @param y Y position in pixels.
  */
-Bar::Bar(int width, int height, int x, int y) : Surface(width, height, x, y), _color(0), _color2(0), _scale(0), _max(0), _value(0), _value2(0), _invert(false), _secondOnTop(true)
+Bar::Bar(int width, int height, int x, int y) : Surface(width, height, x, y), _color(0), _color2(0), _borderColor(0), _scale(0), _max(0), _value(0), _value2(0), _secondOnTop(true)
 {
 
 }
@@ -49,7 +48,7 @@ Bar::~Bar()
 void Bar::setColor(Uint8 color)
 {
 	_color = color;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -65,17 +64,17 @@ Uint8 Bar::getColor() const
  * Changes the color used to draw the second contents.
  * @param color Color value.
  */
-void Bar::setColor2(Uint8 color)
+void Bar::setSecondaryColor(Uint8 color)
 {
 	_color2 = color;
-	draw();
+	_redraw = true;
 }
 
 /**
  * Returns the second color used to draw the bar.
  * @return Color value.
  */
-Uint8 Bar::getColor2() const
+Uint8 Bar::getSecondaryColor() const
 {
 	return _color2;
 }
@@ -87,7 +86,7 @@ Uint8 Bar::getColor2() const
 void Bar::setScale(double scale)
 {
 	_scale = scale;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -106,7 +105,7 @@ double Bar::getScale() const
 void Bar::setMax(double max)
 {
 	_max = max;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -124,8 +123,8 @@ double Bar::getMax() const
  */
 void Bar::setValue(double value)
 {
-	_value = value;
-	draw();
+	_value = (value < 0.0)? 0.0 : value;
+	_redraw = true;
 }
 
 /**
@@ -143,8 +142,8 @@ double Bar::getValue() const
  */
 void Bar::setValue2(double value)
 {
-	_value2 = value;
-	draw();
+	_value2 = (value < 0.0)? 0.0 : value;
+	_redraw = true;
 }
 
 /**
@@ -166,24 +165,12 @@ void Bar::setSecondValueOnTop(bool onTop)
 }
 
 /**
- * Enables/disables color inverting. Some bars have
- * darker borders and others have lighter borders.
- * @param invert Invert setting.
- */
-void Bar::setInvert(bool invert)
-{
-	_invert = invert;
-	draw();
-}
-
-/**
  * Draws the bordered bar filled according
  * to its values.
  */
 void Bar::draw()
 {
-	clear();
-
+	Surface::draw();
 	SDL_Rect square;
 
 	square.x = 0;
@@ -191,55 +178,41 @@ void Bar::draw()
 	square.w = (Uint16)(_scale * _max) + 1;
 	square.h = getHeight();
 
-	if (_invert)
-	{
-        drawRect(&square, _color); 
-	}
+	if (_borderColor)
+		drawRect(&square, _borderColor);
 	else
-	{
-        drawRect(&square, _color + 4);
-	}
+		drawRect(&square, _color + 4);
 
 	square.y++;
 	square.w--;
 	square.h -= 2;
 
 	drawRect(&square, 0);
-	
-	if (_invert)
-    {
-		if (_secondOnTop)
-		{
-			square.w = (Uint16)(_scale * _value);
-			drawRect(&square, _color + 4);
-			square.w = (Uint16)(_scale * _value2);
-			drawRect(&square, _color2 + 4);
-		}
-		else
-		{
-			square.w = (Uint16)(_scale * _value2);
-			drawRect(&square, _color2 + 4);
-			square.w = (Uint16)(_scale * _value);
-			drawRect(&square, _color + 4);
-		}
-    }
+
+	if (_secondOnTop)
+	{
+		square.w = (Uint16)(_scale * _value);
+		drawRect(&square, _color);
+		square.w = (Uint16)(_scale * _value2);
+		drawRect(&square, _color2);
+	}
 	else
-    {
-		if (_secondOnTop)
-		{
-			square.w = (Uint16)(_scale * _value);
-			drawRect(&square, _color);
-			square.w = (Uint16)(_scale * _value2);
-			drawRect(&square, _color2);
-		}
-		else
-		{
-			square.w = (Uint16)(_scale * _value2);
-			drawRect(&square, _color2);
-			square.w = (Uint16)(_scale * _value);
-			drawRect(&square, _color);
-		}
-    }
+	{
+		square.w = (Uint16)(_scale * _value2);
+		drawRect(&square, _color2);
+		square.w = (Uint16)(_scale * _value);
+		drawRect(&square, _color);
+	}
+}
+
+/**
+ * sets the border color for the bar.
+ * @param bc the color for the outline of the bar.
+ * @note will use base colour + 4 if none is defined here.
+ */
+void Bar::setBorderColor(Uint8 bc)
+{
+	_borderColor = bc;
 }
 
 }

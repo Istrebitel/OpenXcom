@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,18 +17,15 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TIMER_H
-#define OPENXCOM_TIMER_H
-
-#include "SDL.h"
+#include <SDL.h>
 #include "State.h"
 #include "Surface.h"
 
 namespace OpenXcom
 {
 
-typedef State &(State::*StateHandler)();
-typedef Surface &(Surface::*SurfaceHandler)();
+typedef void (State::* StateHandler)();
+typedef void (Surface::* SurfaceHandler)();
 
 /**
  * Timer used to run code in fixed intervals.
@@ -36,14 +34,21 @@ typedef Surface &(Surface::*SurfaceHandler)();
  */
 class Timer
 {
+public:
+	static int maxFrameSkip;
+	static Uint32 gameSlowSpeed;
+	
 private:
-	Uint32 _start, _interval;
+	Uint32 _start;
+	Uint32 _frameSkipStart;
+	int _interval;
 	bool _running;
+	bool _frameSkipping;
 	StateHandler _state;
 	SurfaceHandler _surface;
 public:
 	/// Creates a stopped timer.
-	Timer(Uint32 interval);
+	Timer(Uint32 interval, bool frameSkipping = false);
 	/// Cleans up the timer.
 	~Timer();
 	/// Starts the timer.
@@ -62,8 +67,8 @@ public:
 	void onTimer(StateHandler handler);
 	/// Hooks a surface action handler to the timer interval.
 	void onTimer(SurfaceHandler handler);
+	/// Turns frame skipping on or off
+	void setFrameSkipping(bool skip);
 };
 
 }
-
-#endif

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_UNITINFOSTATE_H
-#define OPENXCOM_UNITINFOSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -26,39 +24,56 @@ namespace OpenXcom
 
 class BattleUnit;
 class Text;
+class TextButton;
 class Bar;
 class Surface;
+class SavedBattleGame;
+class BattlescapeState;
 
 /**
- * Unit Info screen that shows all the 
+ * Unit Info screen that shows all the
  * info of a specific unit.
  */
 class UnitInfoState : public State
 {
 private:
+	SavedBattleGame *_battleGame;
+
 	BattleUnit *_unit;
+	BattlescapeState *_parent;
+
+	bool _fromInventory, _mindProbe;
 
 	Surface *_bg;
+	InteractiveSurface *_exit;
 	Text *_txtName;
 
-	Text *_txtTimeUnits, *_txtEnergy, *_txtHealth, *_txtFatalWounds, *_txtBravery, *_txtMorale, *_txtReactions, *_txtFiring, *_txtThrowing, *_txtStrength;
-	Text *_numTimeUnits, *_numEnergy, *_numHealth, *_numFatalWounds, *_numBravery, *_numMorale, *_numReactions, *_numFiring, *_numThrowing, *_numStrength;
-	Bar *_barTimeUnits, *_barEnergy, *_barHealth, *_barFatalWounds, *_barBravery, *_barMorale, *_barReactions, *_barFiring, *_barThrowing, *_barStrength;
+	Text *_txtTimeUnits, *_txtEnergy, *_txtHealth, *_txtFatalWounds, *_txtBravery, *_txtMorale, *_txtReactions, *_txtFiring, *_txtThrowing, *_txtMelee, *_txtStrength;
+	Text *_txtPsiStrength,  *_txtPsiSkill;
+	Text *_numTimeUnits, *_numEnergy, *_numHealth, *_numFatalWounds, *_numBravery, *_numMorale, *_numReactions, *_numFiring, *_numThrowing, *_numMelee, *_numStrength;
+	Text *_numPsiStrength, *_numPsiSkill;
+	Bar *_barTimeUnits, *_barEnergy, *_barHealth, *_barFatalWounds, *_barBravery, *_barMorale, *_barReactions, *_barFiring, *_barThrowing, *_barMelee, *_barStrength;
+	Bar *_barPsiStrength, *_barPsiSkill;
 
-	Text *_txtFrontArmour, *_txtLeftArmour, *_txtRightArmour, *_txtRearArmour, *_txtUnderArmour;
-	Text *_numFrontArmour, *_numLeftArmour, *_numRightArmour, *_numRearArmour, *_numUnderArmour;
-	Bar *_barFrontArmour, *_barLeftArmour, *_barRightArmour, *_barRearArmour, *_barUnderArmour;
+	Text *_txtFrontArmor, *_txtLeftArmor, *_txtRightArmor, *_txtRearArmor, *_txtUnderArmor;
+	Text *_numFrontArmor, *_numLeftArmor, *_numRightArmor, *_numRearArmor, *_numUnderArmor;
+	Bar *_barFrontArmor, *_barLeftArmor, *_barRightArmor, *_barRearArmor, *_barUnderArmor;
+	TextButton *_btnPrev, *_btnNext;
 public:
 	/// Creates the Unit Info state.
-	UnitInfoState(Game *game, BattleUnit *unit);
+	UnitInfoState(BattleUnit *unit, BattlescapeState *parent, bool fromInventory, bool mindProbe);
 	/// Cleans up the Unit Info state.
 	~UnitInfoState();
 	/// Updates the unit info.
 	void init();
 	/// Handler for clicking the button.
 	void handle(Action *action);
+	/// Handler for clicking the Previous button.
+	void btnPrevClick(Action *action);
+	/// Handler for clicking the Next button.
+	void btnNextClick(Action *action);
+	/// Handler for exiting the state.
+	void exitClick(Action *action);
 };
 
 }
-
-#endif

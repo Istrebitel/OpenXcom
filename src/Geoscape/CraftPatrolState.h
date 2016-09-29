@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_CRAFTPATROLSTATE_H
-#define OPENXCOM_CRAFTPATROLSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -45,11 +43,9 @@ private:
 	Text *_txtDestination, *_txtPatrolling;
 public:
 	/// Creates the Geoscape Craft state.
-	CraftPatrolState(Game *game, Craft *craft, Globe *globe);
+	CraftPatrolState(Craft *craft, Globe *globe);
 	/// Cleans up the Geoscape Craft state.
 	~CraftPatrolState();
-	/// Updates the palette.
-	void init();
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
 	/// Handler for clicking the Redirect Craft button.
@@ -57,5 +53,3 @@ public:
 };
 
 }
-
-#endif

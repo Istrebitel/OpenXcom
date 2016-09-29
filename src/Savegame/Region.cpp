@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,7 +17,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Region.h"
-#include "../Ruleset/RuleRegion.h"
+#include "../Mod/RuleRegion.h"
 
 namespace OpenXcom
 {
@@ -26,8 +26,10 @@ namespace OpenXcom
  * Initializes a region of the specified type.
  * @param rules Pointer to ruleset.
  */
-Region::Region(RuleRegion *rules): _rules(rules), _activityXcom(0), _activityAlien(0)
+Region::Region(RuleRegion *rules): _rules(rules)
 {
+	_activityAlien.push_back(0);
+	_activityXcom.push_back(0);
 }
 
 /**
@@ -43,30 +45,79 @@ Region::~Region()
  */
 void Region::load(const YAML::Node &node)
 {
-	node["activityXcom"] >> _activityXcom;
-	node["activityAlien"] >> _activityAlien;
+	_activityXcom = node["activityXcom"].as< std::vector<int> >(_activityXcom);
+	_activityAlien = node["activityAlien"].as< std::vector<int> >(_activityAlien);
 }
 
 /**
  * Saves the region to a YAML file.
- * @param out YAML emitter.
+ * @return YAML node.
  */
-void Region::save(YAML::Emitter &out) const
+YAML::Node Region::save() const
 {
-	out << YAML::BeginMap;
-	out << YAML::Key << "type" << YAML::Value << _rules->getType();
-	out << YAML::Key << "activityXcom" << YAML::Value << _activityXcom;
-	out << YAML::Key << "activityAlien" << YAML::Value << _activityAlien;
-	out << YAML::EndMap;
+	YAML::Node node;
+	node["type"] = _rules->getType();
+	node["activityXcom"] = _activityXcom;
+	node["activityAlien"] = _activityAlien;
+	return node;
 }
 
 /**
  * Returns the ruleset for the region's type.
  * @return Pointer to ruleset.
  */
-RuleRegion *const Region::getRules() const
+RuleRegion *Region::getRules() const
 {
 	return _rules;
+}
+
+/**
+ * Adds to the region's xcom activity level.
+ * @param activity Amount to add.
+ */
+void Region::addActivityXcom(int activity)
+{
+	_activityXcom.back() += activity;
+}
+
+/**
+ * Adds to the region's alien activity level.
+ * @param activity Amount to add.
+ */
+void Region::addActivityAlien(int activity)
+{
+	_activityAlien.back() += activity;
+}
+
+/**
+ * Gets the region's xcom activity level.
+ * @return activity level.
+ */
+std::vector<int> &Region::getActivityXcom()
+{
+	return _activityXcom;
+}
+
+/**
+ * Gets the region's alien activity level.
+ * @return activity level.
+ */
+std::vector<int> &Region::getActivityAlien()
+{
+	return _activityAlien;
+}
+
+/**
+ * Store last month's counters, start new counters.
+ */
+void Region::newMonth()
+{
+	_activityAlien.push_back(0);
+	_activityXcom.push_back(0);
+	if (_activityAlien.size() > 12)
+		_activityAlien.erase(_activityAlien.begin());
+	if (_activityXcom.size() > 12)
+		_activityXcom.erase(_activityXcom.begin());
 }
 
 }

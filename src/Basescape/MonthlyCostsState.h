@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_MONTHLYCOSTSSTATE_H
-#define OPENXCOM_MONTHLYCOSTSSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -41,11 +39,11 @@ private:
 
 	TextButton *_btnOk;
 	Window *_window;
-	Text *_txtTitle, *_txtCost, *_txtQuantity, *_txtTotal, *_txtRental, *_txtSalaries, *_txtIncome;
+	Text *_txtTitle, *_txtCost, *_txtQuantity, *_txtTotal, *_txtRental, *_txtSalaries, *_txtIncome, *_txtMaintenance;
 	TextList *_lstCrafts, *_lstSalaries, *_lstMaintenance, *_lstTotal;
 public:
 	/// Creates the Monthly Costs state.
-	MonthlyCostsState(Game *game, Base *base);
+	MonthlyCostsState(Base *base);
 	/// Cleans up the Monthly Costs state.
 	~MonthlyCostsState();
 	/// Handler for clicking the OK button.
@@ -53,5 +51,3 @@ public:
 };
 
 }
-
-#endif

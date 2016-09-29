@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_MANUFACTURESTATE_H
-#define OPENXCOM_MANUFACTURESTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -40,17 +38,22 @@ private:
 	Base *_base;
 	TextButton *_btnNew, *_btnOk;
 	Window *_window;
-	Text *_txtTitle, *_txtAvailable, *_txtAllocated, *_txtSpace, *_txtFunds, *_txtItem, *_txtEngineers, *_txtProduced, *_txtTotal, *_txtCost, *_txtTimeLeft;
+	Text *_txtTitle, *_txtAvailable, *_txtAllocated, *_txtSpace, *_txtFunds, *_txtItem, *_txtEngineers, *_txtProduced, *_txtCost, *_txtTimeLeft;
 	TextList *_lstManufacture;
+	void lstManufactureClick(Action * action);
 public:
 	/// Creates the Manufacture state.
-	ManufactureState(Game *game, Base *base);
+	ManufactureState(Base *base);
 	/// Cleans up the Manufacture state.
 	~ManufactureState();
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
+	/// Updates the production list.
+	void init();
+	/// Handler for the New Production button.
+	void btnNewProductionClick(Action * action);
+	/// Fills the list of base productions.
+	void fillProductionList();
 };
 
 }
-
-#endif

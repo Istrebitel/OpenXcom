@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TESTSTATE_H
-#define OPENXCOM_TESTSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -30,6 +28,9 @@ class TextButton;
 class Window;
 class Text;
 class TextList;
+class NumberText;
+class Slider;
+class ComboBox;
 
 /**
  * A state purely for testing game functionality.
@@ -43,18 +44,20 @@ class TestState : public State
 {
 private:
 	SurfaceSet *_set;
-	Surface *_surf;
 	TextButton *_button;
 	Window *_window;
 	Text *_text;
+	NumberText *_number;
 	TextList *_list;
+	Slider *_slider;
+	ComboBox *_comboBox;
 	int _i;
-	
+
 	/// Creates a surface with every color in the palette.
 	SDL_Surface *testSurface();
 public:
 	/// Creates the Test state.
-	TestState(Game *game);
+	TestState();
 	/// Cleans up the Test state.
 	~TestState();
 	void think();
@@ -62,5 +65,3 @@ public:
 };
 
 }
-
-#endif

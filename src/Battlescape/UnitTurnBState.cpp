@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,28 +18,25 @@
  */
 
 #include "UnitTurnBState.h"
-#include "TerrainModifier.h"
-#include "BattlescapeState.h"
+#include "TileEngine.h"
 #include "Map.h"
-#include "../Engine/Game.h"
 #include "../Savegame/BattleUnit.h"
 #include "../Savegame/SavedBattleGame.h"
-#include "../Savegame/SavedGame.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/SoundSet.h"
+#include "../Mod/Mod.h"
 #include "../Engine/Sound.h"
-#include "../Engine/RNG.h"
-#include "../Engine/Language.h"
+#include "../Engine/Options.h"
 
 namespace OpenXcom
 {
 
 /**
  * Sets up an UnitTurnBState.
+ * @param parent Pointer to the Battlescape.
+ * @param action Pointer to an action.
  */
-UnitTurnBState::UnitTurnBState(BattlescapeState *parent) : BattleState(parent)
+UnitTurnBState::UnitTurnBState(BattlescapeGame *parent, BattleAction action, bool chargeTUs) : BattleState(parent, action), _unit(0), _turret(false), _chargeTUs(chargeTUs)
 {
-	
+
 }
 
 /**
@@ -50,70 +47,94 @@ UnitTurnBState::~UnitTurnBState()
 
 }
 
+/**
+ * Initializes the state.
+ */
 void UnitTurnBState::init()
 {
-	_parent->setStateInterval(DEFAULT_WALK_SPEED);
-	_unit = _parent->getGame()->getSavedGame()->getBattleGame()->getSelectedUnit();
-	_unit->lookAt(_parent->getAction()->target);
-	if (_unit->getStatus() != STATUS_TURNING)
+	_unit = _action.actor;
+	if (_unit->isOut())
 	{
-		// try to open a door
-		int door = _parent->getGame()->getSavedGame()->getBattleGame()->getTerrainModifier()->unitOpensDoor(_unit);
-		if (door == 0)
+		_parent->popState();
+		return;
+	}
+	_action.TU = 0;
+	if (_unit->getFaction() == FACTION_PLAYER)
+		_parent->setStateInterval(Options::battleXcomSpeed);
+	else
+		_parent->setStateInterval(Options::battleAlienSpeed);
+
+	// if the unit has a turret and we are turning during targeting, then only the turret turns
+	_turret = _unit->getTurretType() != -1 && (_action.targeting || _action.strafe);
+
+	_unit->lookAt(_action.target, _turret);
+
+	if (_chargeTUs && _unit->getStatus() != STATUS_TURNING)
+	{
+		if (_action.type == BA_NONE)
 		{
-			_parent->getGame()->getResourcePack()->getSoundSet("BATTLE.CAT")->getSound(3)->play(); // normal door
-		}
-		if (door == 1)
-		{
-			_parent->getGame()->getResourcePack()->getSoundSet("BATTLE.CAT")->getSound(RNG::generate(20,21))->play(); // ufo door
+			// try to open a door
+			int door = _parent->getTileEngine()->unitOpensDoor(_unit, true);
+			if (door == 0)
+			{
+				_parent->getMod()->getSoundByDepth(_parent->getDepth(), Mod::DOOR_OPEN)->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition())); // normal door
+			}
+			if (door == 1)
+			{
+				_parent->getMod()->getSoundByDepth(_parent->getDepth(), Mod::SLIDING_DOOR_OPEN)->play(-1, _parent->getMap()->getSoundAngle(_unit->getPosition())); // ufo door
+			}
+			if (door == 4)
+			{
+				_action.result = "STR_NOT_ENOUGH_TIME_UNITS";
+			}
 		}
 		_parent->popState();
 	}
 }
 
+/**
+ * Runs state functionality every cycle.
+ */
 void UnitTurnBState::think()
 {
-	const int tu = 1; // one turn is 1 tu
+	const int tu = _chargeTUs ? 1 : 0;
 
-	if (_parent->checkReservedTU(_unit, tu) == false)
+	if (_chargeTUs && _unit->getFaction() == _parent->getSave()->getSide() && _parent->getPanicHandled() && !_action.targeting && !_parent->checkReservedTU(_unit, tu))
 	{
 		_unit->abortTurn();
 		_parent->popState();
-		return;				
+		return;
 	}
 
-	if (_unit->spendTimeUnits(tu, _parent->getGame()->getSavedGame()->getBattleGame()->getDebugMode()))
+	if (_unit->spendTimeUnits(tu))
 	{
-		_unit->turn();
-		_parent->getGame()->getSavedGame()->getBattleGame()->getTerrainModifier()->calculateFOV(_unit);
-		_parent->getMap()->cacheUnits();
+		size_t unitSpotted = _unit->getUnitsSpottedThisTurn().size();
+		_unit->turn(_turret);
+		_parent->getTileEngine()->calculateFOV(_unit);
+		_unit->setCache(0);
+		_parent->getMap()->cacheUnit(_unit);
+		if (_chargeTUs && _unit->getFaction() == _parent->getSave()->getSide() && _parent->getPanicHandled() && _action.type == BA_NONE && _unit->getUnitsSpottedThisTurn().size() > unitSpotted)
+		{
+			_unit->abortTurn();
+		}
 		if (_unit->getStatus() == STATUS_STANDING)
 		{
 			_parent->popState();
 		}
 	}
-	else
+	else if (_parent->getPanicHandled())
 	{
-		_result = "STR_NOT_ENOUGH_TIME_UNITS";
+		_action.result = "STR_NOT_ENOUGH_TIME_UNITS";
 		_unit->abortTurn();
 		_parent->popState();
 	}
 }
 
-/*
+/**
  * Unit turning cannot be cancelled.
  */
 void UnitTurnBState::cancel()
 {
-}
-
-/*
- * Get the action result. Returns error messages or an empty string when everything went fine.
- * @return returnmessage Empty when everything is fine.
- */
-std::string UnitTurnBState::getResult() const
-{
-	return _result;
 }
 
 }

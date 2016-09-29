@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,18 +17,16 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "CraftPatrolState.h"
-#include <string>
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Savegame/Craft.h"
 #include "../Savegame/Target.h"
 #include "GeoscapeCraftState.h"
+#include "../Engine/Options.h"
 
 namespace OpenXcom
 {
@@ -39,7 +37,7 @@ namespace OpenXcom
  * @param craft Pointer to the craft to display.
  * @param globe Pointer to the Geoscape globe.
  */
-CraftPatrolState::CraftPatrolState(Game *game, Craft *craft, Globe *globe) : State(game), _craft(craft), _globe(globe)
+CraftPatrolState::CraftPatrolState(Craft *craft, Globe *globe) : _craft(craft), _globe(globe)
 {
 	_screen = false;
 
@@ -47,44 +45,41 @@ CraftPatrolState::CraftPatrolState(Game *game, Craft *craft, Globe *globe) : Sta
 	_window = new Window(this, 224, 168, 16, 16, POPUP_BOTH);
 	_btnOk = new TextButton(140, 12, 58, 144);
 	_btnRedirect = new TextButton(140, 12, 58, 160);
-	_txtDestination = new Text(140, 64, 58, 48);
-	_txtPatrolling = new Text(140, 16, 58, 120);
-	
-	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(4)), Palette::backPos, 16);
+	_txtDestination = new Text(224, 64, 16, 48);
+	_txtPatrolling = new Text(224, 17, 16, 120);
 
-	add(_window);
-	add(_btnOk);
-	add(_btnRedirect);
-	add(_txtDestination);
-	add(_txtPatrolling);
+	// Set palette
+	setInterface("geoCraftScreens");
+
+	add(_window, "window", "geoCraftScreens");
+	add(_btnOk, "button", "geoCraftScreens");
+	add(_btnRedirect, "button", "geoCraftScreens");
+	add(_txtDestination, "text1", "geoCraftScreens");
+	add(_txtPatrolling, "text1", "geoCraftScreens");
+
+	centerAllSurfaces();
 
 	// Set up objects
-	_window->setColor(Palette::blockOffset(15)+2);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK12.SCR"));
+	_window->setBackground(_game->getMod()->getSurface("BACK12.SCR"));
 
-	_btnOk->setColor(Palette::blockOffset(8)+8);
-	_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&CraftPatrolState::btnOkClick);
+	_btnOk->onKeyboardPress((ActionHandler)&CraftPatrolState::btnOkClick, Options::keyCancel);
 
-	_btnRedirect->setColor(Palette::blockOffset(8)+8);
-	_btnRedirect->setText(_game->getLanguage()->getString("STR_REDIRECT_CRAFT"));
+	_btnRedirect->setText(tr("STR_REDIRECT_CRAFT"));
 	_btnRedirect->onMouseClick((ActionHandler)&CraftPatrolState::btnRedirectClick);
+	_btnRedirect->onKeyboardPress((ActionHandler)&CraftPatrolState::btnRedirectClick, Options::keyOk);
 
-	_txtDestination->setColor(Palette::blockOffset(15)-1);
 	_txtDestination->setBig();
 	_txtDestination->setAlign(ALIGN_CENTER);
 	_txtDestination->setWordWrap(true);
-	std::wstring s = _craft->getName(_game->getLanguage()) + L'\n';
-	s += _game->getLanguage()->getString("STR_HAS_REACHED") + L'\n';
-	s += _game->getLanguage()->getString("STR_DESTINATION") + L'\n';
-	s += _craft->getDestination()->getName(_game->getLanguage());
-	_txtDestination->setText(s);
+	_txtDestination->setText(tr("STR_CRAFT_HAS_REACHED_DESTINATION")
+							 .arg(_craft->getName(_game->getLanguage()))
+							 .arg(_craft->getDestination()->getName(_game->getLanguage())));
 
-	_txtPatrolling->setColor(Palette::blockOffset(15)-1);
 	_txtPatrolling->setBig();
 	_txtPatrolling->setAlign(ALIGN_CENTER);
-	_txtPatrolling->setText(_game->getLanguage()->getString("STR_NOW_PATROLLING"));
+	_txtPatrolling->setText(tr("STR_NOW_PATROLLING"));
 }
 
 /**
@@ -92,22 +87,14 @@ CraftPatrolState::CraftPatrolState(Game *game, Craft *craft, Globe *globe) : Sta
  */
 CraftPatrolState::~CraftPatrolState()
 {
-	
-}
 
-/**
- * Resets the palette.
- */
-void CraftPatrolState::init()
-{
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(4)), Palette::backPos, 16);
 }
 
 /**
  * Closes the window.
  * @param action Pointer to an action.
  */
-void CraftPatrolState::btnOkClick(Action *action)
+void CraftPatrolState::btnOkClick(Action *)
 {
 	_game->popState();
 }
@@ -116,10 +103,10 @@ void CraftPatrolState::btnOkClick(Action *action)
  * Opens up the Craft window.
  * @param action Pointer to an action.
  */
-void CraftPatrolState::btnRedirectClick(Action *action)
+void CraftPatrolState::btnRedirectClick(Action *)
 {
 	_game->popState();
-	_game->pushState(new GeoscapeCraftState(_game, _craft, _globe, 0));
+	_game->pushState(new GeoscapeCraftState(_craft, _globe, 0));
 }
 
 }

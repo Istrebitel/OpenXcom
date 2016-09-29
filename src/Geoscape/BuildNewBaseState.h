@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http:///www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_BUILDNEWBASESTATE_H
-#define OPENXCOM_BUILDNEWBASESTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -45,13 +43,17 @@ private:
 	Window *_window;
 	Text *_txtTitle;
 	TextButton *_btnCancel;
+	Timer *_hoverTimer;
 	bool _first;
+	bool _oldshowradar;
+	double _oldlat,_oldlon;
+	int _mousex, _mousey;
 public:
 	/// Creates the Build New Base state.
-	BuildNewBaseState(Game *game, Base *base, Globe *globe, bool first);
+	BuildNewBaseState(Base *base, Globe *globe, bool first);
 	/// Cleans up the Build New Base state.
 	~BuildNewBaseState();
-	/// Updates the palette.
+	/// Resets globe.
 	void init();
 	/// Runs the timer.
 	void think();
@@ -59,6 +61,10 @@ public:
 	void handle(Action *action);
 	/// Handler for clicking the globe.
 	void globeClick(Action *action);
+	/// Handler for mouse hovering the globe.
+	void globeHover(Action *action);
+	/// Handler for redrawing hover (delayed)
+	void hoverRedraw(void);
 	/// Handler for pressing the Rotate Left arrow.
 	void btnRotateLeftPress(Action *action);
 	/// Handler for releasing the Rotate Left arrow.
@@ -75,14 +81,18 @@ public:
 	void btnRotateDownPress(Action *action);
 	/// Handler for releasing the Rotate Down arrow.
 	void btnRotateDownRelease(Action *action);
-	/// Handler for clicking the Zoom In icon.
-	void btnZoomInClick(Action *action);
-	/// Handler for clicking the Zoom Out icon.
-	void btnZoomOutClick(Action *action);
+	/// Handler for left-clicking the Zoom In icon.
+	void btnZoomInLeftClick(Action *action);
+	/// Handler for right-clicking the Zoom In icon.
+	void btnZoomInRightClick(Action *action);
+	/// Handler for left-clicking the Zoom Out icon.
+	void btnZoomOutLeftClick(Action *action);
+	/// Handler for right-clicking the Zoom Out icon.
+	void btnZoomOutRightClick(Action *action);
 	/// Handler for clicking the Cancel button.
 	void btnCancelClick(Action *action);
+	/// Let the state know the window has been resized.
+	void resize(int &dX, int &dY);
 };
 
 }
-
-#endif

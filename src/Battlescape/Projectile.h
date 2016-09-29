@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,57 +17,68 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_PROJECTILE_H
-#define OPENXCOM_PROJECTILE_H
-
 #include <vector>
 #include "Position.h"
+#include "BattlescapeGame.h"
 
 namespace OpenXcom
 {
 
-class ResourcePack;
 class BattleItem;
 class SavedBattleGame;
 class Surface;
+class Tile;
+class Mod;
 
 /**
- * A class that represents a projectile. Map is the owner of an instance of this class during it's short life.
- * It calculates it's own trajectory and then moves along this precalculated trajectory in voxel space.
+ * A class that represents a projectile. Map is the owner of an instance of this class during its short life.
+ * It calculates its own trajectory and then moves along this precalculated trajectory in voxel space.
  */
 class Projectile
 {
 private:
-	ResourcePack *_res;
+	Mod *_mod;
 	SavedBattleGame *_save;
-	BattleItem *_item;
-	Position _origin, _target;
+	BattleAction _action;
+	Position _origin, _targetVoxel;
 	std::vector<Position> _trajectory;
-	unsigned int _position;
-	static const int _trail[11][36];
-	int _bulletType;
-	Surface *_sprite, *_shadowSprite;
-	void applyAccuracy(const Position& origin, Position *target, double accuracy);
+	size_t _position;
+	Surface *_sprite;
+	int _speed;
+	int _bulletSprite;
+	bool _reversed;
+	int _vaporColor, _vaporDensity, _vaporProbability;
+	void applyAccuracy(const Position& origin, Position *target, double accuracy, bool keepRange, bool extendLine);
 public:
 	/// Creates a new Projectile.
-	Projectile(ResourcePack *res, SavedBattleGame *save, Position origin, Position target, int bulletType, BattleItem *item);
+	Projectile(Mod *mod, SavedBattleGame *save, BattleAction action, Position origin, Position target, BattleItem *ammo);
 	/// Cleans up the Projectile.
 	~Projectile();
-	/// Calculates the trajectory.
-	bool calculateTrajectory(double accuracy);
-	bool calculateThrow(double accuracy);
-	/// Move the projectile one step in it's trajectory.
+	/// Calculates the trajectory for a straight path.
+	int calculateTrajectory(double accuracy);
+	int calculateTrajectory(double accuracy, Position originVoxel, bool excludeUnit = true);
+	/// Calculates the trajectory for a curved path.
+	int calculateThrow(double accuracy);
+	/// Moves the projectile one step in its trajectory.
 	bool move();
-	/// Get the current position in voxel space.
+	/// Gets the current position in voxel space.
 	Position getPosition(int offset = 0) const;
-	/// Get a particle from the particle array.
-	int getParticle(int i);
-	/// Get the item
+	/// Gets a particle from the particle array.
+	int getParticle(int i) const;
+	/// Gets the item.
 	BattleItem *getItem() const;
+	/// Gets the sprite.
 	Surface *getSprite() const;
-	Surface *getShadowSprite() const;
+	/// Skips the bullet flight.
+	void skipTrajectory();
+	/// Gets the Position of origin for the projectile.
+	Position getOrigin() const;
+	/// Gets the targetted tile for the projectile.
+	Position getTarget() const;
+	/// Is this projectile being drawn back-to-front or front-to-back?
+	bool isReversed() const;
+	/// adds a cloud of particles at the projectile's location
+	void addVaporCloud();
 };
 
 }
-
-#endif

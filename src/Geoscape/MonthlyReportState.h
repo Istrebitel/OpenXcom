@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_MONTHLYREPORTSTATE_H
-#define OPENXCOM_MONTHLYREPORTSTATE_H
-
 #include "../Engine/State.h"
+#include <vector>
+#include <string>
 
 namespace OpenXcom
 {
@@ -27,6 +27,9 @@ namespace OpenXcom
 class TextButton;
 class Window;
 class Text;
+class Globe;
+class Base;
+class Soldier;
 
 /**
  * Report screen shown monthly to display
@@ -35,20 +38,29 @@ class Text;
 class MonthlyReportState : public State
 {
 private:
-	TextButton *_btnOk;
+	TextButton *_btnOk, *_btnBigOk;
 	Window *_window;
-	Text *_txtTitle, *_txtMonth, *_txtRating, *_txtChange, *_txtDesc;
+	Text *_txtTitle, *_txtMonth, *_txtRating;
+	Text *_txtIncome, *_txtMaintenance, *_txtBalance;
+	Text *_txtDesc, *_txtFailure;
+	bool _psi, _gameOver;
+	int _ratingTotal, _fundingDiff, _lastMonthsRating;
+	std::vector<std::string> _happyList, _sadList, _pactList;
+	Globe *_globe;
+	std::vector<Soldier*> _soldiersMedalled;
+	/// Builds a country list string.
+	std::wstring countryList(const std::vector<std::string> &countries, const std::string &singular, const std::string &plural);
 public:
 	/// Creates the Monthly Report state.
-	MonthlyReportState(Game *game);
+	MonthlyReportState(bool psi, Globe *globe);
 	/// Cleans up the Monthly Report state.
 	~MonthlyReportState();
-	/// Updates the palette.
+	/// Updates the ending.
 	void init();
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
+	/// Calculate monthly scores.
+	void calculateChanges();
 };
 
 }
-
-#endif

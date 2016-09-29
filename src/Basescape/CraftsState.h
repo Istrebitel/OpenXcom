@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_CRAFTSSTATE_H
-#define OPENXCOM_CRAFTSSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -44,7 +42,7 @@ private:
 	Base *_base;
 public:
 	/// Creates the Crafts state.
-	CraftsState(Game *game, Base *base);
+	CraftsState(Base *base);
 	/// Cleans up the Crafts state.
 	~CraftsState();
 	/// Updates the craft info.
@@ -56,5 +54,3 @@ public:
 };
 
 }
-
-#endif

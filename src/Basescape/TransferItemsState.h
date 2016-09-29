@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,12 +17,11 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TRANSFERITEMSSTATE_H
-#define OPENXCOM_TRANSFERITEMSSTATE_H
-
 #include "../Engine/State.h"
+#include "../Savegame/Transfer.h"
 #include <vector>
 #include <string>
+#include <set>
 
 namespace OpenXcom
 {
@@ -30,10 +30,9 @@ class TextButton;
 class Window;
 class Text;
 class TextList;
+class ComboBox;
 class Timer;
 class Base;
-class Soldier;
-class Craft;
 
 /**
  * Transfer screen that lets the player pick
@@ -45,32 +44,34 @@ private:
 	Base *_baseFrom, *_baseTo;
 	TextButton *_btnOk, *_btnCancel;
 	Window *_window;
-	Text *_txtTitle, *_txtItem, *_txtQuantity, *_txtAmountTransfer, *_txtAmountDestination;
+	Text *_txtTitle, *_txtQuantity, *_txtAmountTransfer, *_txtAmountDestination;
+	ComboBox *_cbxCategory;
 	TextList *_lstItems;
-	std::vector<int> _qtys;
-	std::vector<Soldier*> _soldiers;
-	std::vector<Craft*> _crafts;
-	std::vector<std::string> _items;
-	unsigned int _sel;
-	int _total, _sOffset, _eOffset, _pQty, _cQty;
-	float _iQty;
+	std::vector<TransferRow> _items;
+	std::vector<int> _rows;
+	std::vector<std::string> _cats;
+	std::set<std::string> _craftWeapons, _armors;
+	size_t _sel;
+	int _total, _pQty, _cQty, _aQty;
+	double _iQty;
 	double _distance;
+	Uint8 _ammoColor;
 	Timer *_timerInc, *_timerDec;
-	/// Gets selected cost.
-	int getCost();
-	/// Gets selected quantity.
-	int getQuantity();
+	/// Gets the category of the current selection.
+	std::string getCategory(int sel) const;
+	/// Gets the row of the current selection.
+	TransferRow &getRow() { return _items[_rows[_sel]]; }
 	/// Gets distance between bases.
-	double getDistance();
+	double getDistance() const;
 public:
 	/// Creates the Transfer Items state.
-	TransferItemsState(Game *game, Base *baseFrom, Base *baseTo);
+	TransferItemsState(Base *baseFrom, Base *baseTo);
 	/// Cleans up the Transfer Items state.
 	~TransferItemsState();
-	/// Updates the palette.
-	void init();
 	/// Runs the timers.
 	void think();
+	/// Updates the item list.
+	void updateList();
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
 	/// Completes the transfer between bases.
@@ -81,18 +82,30 @@ public:
 	void lstItemsLeftArrowPress(Action *action);
 	/// Handler for releasing an Increase arrow in the list.
 	void lstItemsLeftArrowRelease(Action *action);
+	/// Handler for clicking an Increase arrow in the list.
+	void lstItemsLeftArrowClick(Action *action);
 	/// Handler for pressing a Decrease arrow in the list.
 	void lstItemsRightArrowPress(Action *action);
 	/// Handler for releasing a Decrease arrow in the list.
 	void lstItemsRightArrowRelease(Action *action);
-	/// Increases the quantity of an item.
+	/// Handler for clicking a Decrease arrow in the list.
+	void lstItemsRightArrowClick(Action *action);
+	/// Handler for pressing-down a mouse-button in the list.
+	void lstItemsMousePress(Action *action);
+	/// Increases the quantity of an item by one.
 	void increase();
-	/// Decreases the quantity of an item.
+	/// Increases the quantity of an item by the given value.
+	void increaseByValue(int change);
+	/// Decreases the quantity of an item by one.
 	void decrease();
+	/// Decreases the quantity of an item by the given value.
+	void decreaseByValue(int change);
+	/// Updates the quantity-strings of the selected item.
+	void updateItemStrings();
 	/// Gets the total of the transfer.
-	int getTotal();
+	int getTotal() const;
+	/// Handler for changing the category filter.
+	void cbxCategoryChange(Action *action);
 };
 
 }
-
-#endif

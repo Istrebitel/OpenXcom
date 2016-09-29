@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,16 +18,15 @@
  */
 #include "BuildFacilitiesState.h"
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
+#include "../Engine/Options.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextList.h"
-#include "../Ruleset/Ruleset.h"
-#include "../Ruleset/RuleBaseFacility.h"
+#include "../Mod/RuleBaseFacility.h"
+#include "../Savegame/SavedGame.h"
 #include "PlaceFacilityState.h"
 
 namespace OpenXcom
@@ -39,59 +38,46 @@ namespace OpenXcom
  * @param base Pointer to the base to get info from.
  * @param state Pointer to the base state to refresh.
  */
-BuildFacilitiesState::BuildFacilitiesState(Game *game, Base *base, State *state) : State(game), _base(base), _state(state), _facilities()
+BuildFacilitiesState::BuildFacilitiesState(Base *base, State *state) : _base(base), _state(state)
 {
 	_screen = false;
 
 	// Create objects
 	_window = new Window(this, 128, 160, 192, 40, POPUP_VERTICAL);
 	_btnOk = new TextButton(112, 16, 200, 176);
-	_txtTitle = new Text(118, 16, 197, 48);
-	_lstFacilities = new TextList(105, 110, 200, 64);
+	_lstFacilities = new TextList(104, 104, 200, 64);
+	_txtTitle = new Text(118, 17, 197, 48);
 
 	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(6)), Palette::backPos, 16);
+	setInterface("selectFacility");
 
-	add(_window);
-	add(_btnOk);
-	add(_txtTitle);
-	add(_lstFacilities);
+	add(_window, "window", "selectFacility");
+	add(_btnOk, "button", "selectFacility");
+	add(_txtTitle, "text", "selectFacility");
+	add(_lstFacilities, "list", "selectFacility");
+
+	centerAllSurfaces();
 
 	// Set up objects
-	_window->setColor(Palette::blockOffset(13)+8);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK05.SCR"));
+	_window->setBackground(_game->getMod()->getSurface("BACK05.SCR"));
 
-	_btnOk->setColor(Palette::blockOffset(13)+8);
-	_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&BuildFacilitiesState::btnOkClick);
+	_btnOk->onKeyboardPress((ActionHandler)&BuildFacilitiesState::btnOkClick, Options::keyCancel);
 
-	_txtTitle->setColor(Palette::blockOffset(13));
 	_txtTitle->setBig();
 	_txtTitle->setAlign(ALIGN_CENTER);
-	_txtTitle->setText(_game->getLanguage()->getString("STR_INSTALLATION"));
+	_txtTitle->setText(tr("STR_INSTALLATION"));
 
-	_lstFacilities->setColor(Palette::blockOffset(13)+5);
-	_lstFacilities->setArrowColor(Palette::blockOffset(13)+8);
-	_lstFacilities->setColumns(1, 105);
+	_lstFacilities->setColumns(1, 104);
 	_lstFacilities->setSelectable(true);
 	_lstFacilities->setBackground(_window);
 	_lstFacilities->setMargin(2);
+	_lstFacilities->setWordWrap(true);
+	_lstFacilities->setScrolling(true, 0);
 	_lstFacilities->onMouseClick((ActionHandler)&BuildFacilitiesState::lstFacilitiesClick);
 
-	_facilities.push_back(_game->getRuleset()->getBaseFacility("STR_LIVING_QUARTERS"));
-	_facilities.push_back(_game->getRuleset()->getBaseFacility("STR_LABORATORY"));
-	_facilities.push_back(_game->getRuleset()->getBaseFacility("STR_WORKSHOP"));
-	_facilities.push_back(_game->getRuleset()->getBaseFacility("STR_GENERAL_STORES"));
-	_facilities.push_back(_game->getRuleset()->getBaseFacility("STR_ALIEN_CONTAINMENT"));
-	_facilities.push_back(_game->getRuleset()->getBaseFacility("STR_SMALL_RADAR_SYSTEM"));
-	_facilities.push_back(_game->getRuleset()->getBaseFacility("STR_LARGE_RADAR_SYSTEM"));
-	_facilities.push_back(_game->getRuleset()->getBaseFacility("STR_MISSILE_DEFENSES"));
-	_facilities.push_back(_game->getRuleset()->getBaseFacility("STR_HANGAR"));
-
-	for (std::vector<RuleBaseFacility*>::iterator i = _facilities.begin(); i != _facilities.end(); ++i)
-	{
-		_lstFacilities->addRow(1, _game->getLanguage()->getString((*i)->getType()).c_str());
-	}
+	PopulateBuildList();
 }
 
 /**
@@ -103,19 +89,39 @@ BuildFacilitiesState::~BuildFacilitiesState()
 }
 
 /**
+ * Populates the build list from the current "available" facilities.
+ */
+void BuildFacilitiesState::PopulateBuildList()
+{
+	const std::vector<std::string> &facilities = _game->getMod()->getBaseFacilitiesList();
+	for (std::vector<std::string>::const_iterator i = facilities.begin(); i != facilities.end(); ++i)
+	{
+		RuleBaseFacility *rule = _game->getMod()->getBaseFacility(*i);
+		if (_game->getSavedGame()->isResearched(rule->getRequirements()) && !rule->isLift())
+			_facilities.push_back(rule);
+	}
+
+	for (std::vector<RuleBaseFacility*>::iterator i = _facilities.begin(); i != _facilities.end(); ++i)
+	{
+		_lstFacilities->addRow(1, tr((*i)->getType()).c_str());
+	}
+}
+
+/**
  * The player can change the selected base
  * or change info on other screens.
  */
 void BuildFacilitiesState::init()
 {
 	_state->init();
+	State::init();
 }
 
 /**
  * Returns to the previous screen.
  * @param action Pointer to an action.
  */
-void BuildFacilitiesState::btnOkClick(Action *action)
+void BuildFacilitiesState::btnOkClick(Action *)
 {
 	_game->popState();
 }
@@ -124,9 +130,9 @@ void BuildFacilitiesState::btnOkClick(Action *action)
  * Places the selected facility.
  * @param action Pointer to an action.
  */
-void BuildFacilitiesState::lstFacilitiesClick(Action *action)
+void BuildFacilitiesState::lstFacilitiesClick(Action *)
 {
-	_game->pushState(new PlaceFacilityState(_game, _base, _facilities[_lstFacilities->getSelectedRow()]));
+	_game->pushState(new PlaceFacilityState(_base, _facilities[_lstFacilities->getSelectedRow()]));
 }
 
 }

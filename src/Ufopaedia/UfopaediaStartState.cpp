@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -19,152 +19,95 @@
 
 #include "UfopaediaStartState.h"
 #include "UfopaediaSelectState.h"
-#include "../Ruleset/ArticleDefinition.h"
 #include "../Engine/Game.h"
-#include "../Engine/Palette.h"
-#include "../Engine/Surface.h"
-#include "../Engine/Language.h"
+#include "../Engine/Action.h"
+#include "../Engine/Options.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
-#include "../Resource/ResourcePack.h"
+#include "../Mod/Mod.h"
 
 namespace OpenXcom
 {
-	UfopaediaStartState::UfopaediaStartState(Game *game) : State(game)
+	UfopaediaStartState::UfopaediaStartState()
 	{
 		_screen = false;
 
 		// set background window
 		_window = new Window(this, 256, 180, 32, 10, POPUP_BOTH);
-		
+
 		// set title
-		_txtTitle = new Text(224, 16, 48, 33);
-		
-		// set buttons
-		_btnOk = new TextButton(224, 12, 48, 167);
-		_btnCraftArmament = new TextButton(224, 12, 48, 50);
-		_btnWeaponsEquipment = new TextButton(224, 12, 48, 76);
-		_btnBaseFacilities = new TextButton(224, 12, 48, 102);
-		_btnAlienLifeforms = new TextButton(224, 12, 48, 115);
-		_btnAlienResearch = new TextButton(224, 12, 48, 128);
-		_btnUfos = new TextButton(224, 12, 48, 154);
+		_txtTitle = new Text(224, 17, 48, 33);
 
 		// Set palette
-		_game->setPalette(_game->getResourcePack()->getPalette("PALETTES.DAT_0")->getColors());
+		setInterface("ufopaedia");
 
-		add(_window);
-		add(_txtTitle);
-		add(_btnOk);
-		add(_btnCraftArmament);
-		add(_btnWeaponsEquipment);
-		add(_btnBaseFacilities);
-		add(_btnAlienLifeforms);
-		add(_btnAlienResearch);
-		add(_btnUfos);
-		
-		_window->setColor(Palette::blockOffset(15)+2);
-		_window->setBackground(_game->getResourcePack()->getSurface("BACK01.SCR"));
-		
-		_txtTitle->setColor(Palette::blockOffset(8)+10);
+		add(_window, "window", "ufopaedia");
+		add(_txtTitle, "text", "ufopaedia");
+
+		_btnOk = new TextButton(224, 12, 48, 167);
+		add(_btnOk, "button1", "ufopaedia");
+
+		// set buttons
+		const std::vector<std::string> &list = _game->getMod()->getUfopaediaCategoryList();
+		int y = 50;
+		y -= 13 * (list.size() - 9);
+		for (std::vector<std::string>::const_iterator i = list.begin(); i != list.end(); ++i)
+		{
+			TextButton *button = new TextButton(224, 12, 48, y);
+			y += 13;
+
+			add(button, "button1", "ufopaedia");
+
+			button->setText(tr(*i));
+			button->onMouseClick((ActionHandler)&UfopaediaStartState::btnSectionClick);
+
+			_btnSections.push_back(button);
+		}
+		_txtTitle->setY(_btnSections.front()->getY() - _txtTitle->getHeight());
+
+		centerAllSurfaces();
+
+		_window->setBackground(_game->getMod()->getSurface("BACK01.SCR"));
+
 		_txtTitle->setBig();
 		_txtTitle->setAlign(ALIGN_CENTER);
-		_txtTitle->setText(_game->getLanguage()->getString("STR_UFOPAEDIA"));
+		_txtTitle->setText(tr("STR_UFOPAEDIA"));
 		
-		_btnOk->setColor(Palette::blockOffset(8)+8);
-		_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+		_btnOk->setText(tr("STR_OK"));
 		_btnOk->onMouseClick((ActionHandler)&UfopaediaStartState::btnOkClick);
-		
-		_btnCraftArmament->setColor(Palette::blockOffset(8)+8);
-		_btnCraftArmament->setText(_game->getLanguage()->getString("STR_XCOM_CRAFT_ARMAMENT"));
-		_btnCraftArmament->onMouseClick((ActionHandler)&UfopaediaStartState::btnCraftArmamentClick);
-
-		_btnWeaponsEquipment->setColor(Palette::blockOffset(8)+8);
-		_btnWeaponsEquipment->setText(_game->getLanguage()->getString("STR_WEAPONS_AND_EQUIPMENT"));
-		_btnWeaponsEquipment->onMouseClick((ActionHandler)&UfopaediaStartState::btnWeaponsEquipmentClick);
-		
-		_btnBaseFacilities->setColor(Palette::blockOffset(8)+8);
-		_btnBaseFacilities->setText(_game->getLanguage()->getString("STR_BASE_FACILITIES"));
-		_btnBaseFacilities->onMouseClick((ActionHandler)&UfopaediaStartState::btnBaseFacilitiesClick);
-		
-		_btnAlienLifeforms->setColor(Palette::blockOffset(8)+8);
-		_btnAlienLifeforms->setText(_game->getLanguage()->getString("STR_ALIEN_LIFE_FORMS"));
-		_btnAlienLifeforms->onMouseClick((ActionHandler)&UfopaediaStartState::btnAlienLifeformsClick);
-		
-		_btnAlienResearch->setColor(Palette::blockOffset(8)+8);
-		_btnAlienResearch->setText(_game->getLanguage()->getString("STR_ALIEN_RESEARCH_UC"));
-		_btnAlienResearch->onMouseClick((ActionHandler)&UfopaediaStartState::btnAlienResearchClick);
-		
-		_btnUfos->setColor(Palette::blockOffset(8)+8);
-		_btnUfos->setText(_game->getLanguage()->getString("STR_UFOS"));
-		_btnUfos->onMouseClick((ActionHandler)&UfopaediaStartState::btnUfosClick);
+		_btnOk->onKeyboardPress((ActionHandler)&UfopaediaStartState::btnOkClick, Options::keyCancel);
+		_btnOk->onKeyboardPress((ActionHandler)&UfopaediaStartState::btnOkClick, Options::keyGeoUfopedia);
 	}
-	
+
 	UfopaediaStartState::~UfopaediaStartState()
 	{}
-	
+
 	/**
 	 * Returns to the previous screen.
 	 * @param action Pointer to an action.
 	 */
-	void UfopaediaStartState::btnOkClick(Action *action)
+	void UfopaediaStartState::btnOkClick(Action *)
 	{
 		_game->popState();
-//		_game->quit();
 	}
-	
+
 	/**
-	 * 
+	 * Displays the list of articles for this section.
 	 * @param action Pointer to an action.
 	 */
-	void UfopaediaStartState::btnCraftArmamentClick(Action *action)
+	void UfopaediaStartState::btnSectionClick(Action *action)
 	{
-		_game->pushState(new UfopaediaSelectState(_game, UFOPAEDIA_XCOM_CRAFT_ARMAMENT));
+		const std::vector<std::string> &list = _game->getMod()->getUfopaediaCategoryList();
+		for (size_t i = 0; i < list.size(); ++i)
+		{
+			if (action->getSender() == _btnSections[i])
+			{
+				_game->pushState(new UfopaediaSelectState(list[i]));
+				break;
+			}
+		}
 	}
-	
-	/**
-	 * 
-	 * @param action Pointer to an action.
-	 */
-	void UfopaediaStartState::btnWeaponsEquipmentClick(Action *action)
-	{
-		_game->pushState(new UfopaediaSelectState(_game, UFOPAEDIA_WEAPONS_AND_EQUIPMENT));
-	}
-	
-	/**
-	 * 
-	 * @param action Pointer to an action.
-	 */
-	void UfopaediaStartState::btnBaseFacilitiesClick(Action *action)
-	{
-		_game->pushState(new UfopaediaSelectState(_game, UFOPAEDIA_BASE_FACILITIES));
-	}
-	
-	/**
-	 * 
-	 * @param action Pointer to an action.
-	 */
-	void UfopaediaStartState::btnAlienLifeformsClick(Action *action)
-	{
-		_game->pushState(new UfopaediaSelectState(_game, UFOPAEDIA_ALIEN_LIFE_FORMS));
-	}
-	
-	/**
-	 * 
-	 * @param action Pointer to an action.
-	 */
-	void UfopaediaStartState::btnAlienResearchClick(Action *action)
-	{
-		_game->pushState(new UfopaediaSelectState(_game, UFOPAEDIA_ALIEN_RESEARCH));
-	}
-	
-	/**
-	 * 
-	 * @param action Pointer to an action.
-	 */
-	void UfopaediaStartState::btnUfosClick(Action *action)
-	{
-		_game->pushState(new UfopaediaSelectState(_game, UFOPAEDIA_UFOS));
-	}
-	
+
 }

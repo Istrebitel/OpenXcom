@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,11 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_MUSIC_H
-#define OPENXCOM_MUSIC_H
-
 #include <string>
-#include "SDL_mixer.h"
+#include <SDL_mixer.h>
 
 namespace OpenXcom
 {
@@ -37,15 +35,21 @@ public:
 	/// Creates a blank music track.
 	Music();
 	/// Cleans up the music track.
-	~Music();
+	virtual ~Music();
 	/// Loads music from the specified file.
-	void load(const std::string &filename);
+	virtual void load(const std::string &filename);
 	/// Loads music from a chunk of memory.
-	void load(const void *data, unsigned int size);
+	virtual void load(const void *data, int size);
 	/// Plays the music.
-	void play() const;
+	virtual void play(int loop = -1) const;
+	/// Stops all music.
+	static void stop();
+	/// Pauses all music.
+	static void pause();
+	/// Resumes all music.
+	static void resume();
+	/// Checks if music is playing.
+	static bool isPlaying();
 };
 
 }
-
-#endif

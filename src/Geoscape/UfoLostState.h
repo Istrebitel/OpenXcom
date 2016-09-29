@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_UFOLOSTSTATE_H
-#define OPENXCOM_UFOLOSTSTATE_H
-
 #include "../Engine/State.h"
 #include <string>
 
@@ -42,15 +40,11 @@ private:
 	std::wstring _id;
 public:
 	/// Creates the Ufo Lost state.
-	UfoLostState(Game *game, std::wstring id);
+	UfoLostState(const std::wstring &id);
 	/// Cleans up the Ufo Lost state.
 	~UfoLostState();
-	/// Updates the palette.
-	void init();
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
 };
 
 }
-
-#endif

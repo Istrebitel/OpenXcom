@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,24 +17,23 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "LoadGameState.h"
-#include <iostream>
-#include "yaml.h"
-#include "../Savegame/SavedGame.h"
+#include <sstream>
+#include "../Engine/Logger.h"
 #include "../Savegame/SavedBattleGame.h"
 #include "../Engine/Game.h"
 #include "../Engine/Exception.h"
-#include "../Resource/ResourcePack.h"
-#include "../Ruleset/XcomRuleset.h"
+#include "../Engine/Options.h"
+#include "../Engine/CrossPlatform.h"
+#include "../Engine/Screen.h"
 #include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
-#include "../Interface/TextButton.h"
-#include "../Interface/Window.h"
 #include "../Interface/Text.h"
-#include "../Interface/TextList.h"
 #include "../Geoscape/GeoscapeState.h"
-#include "../Geoscape/GeoscapeErrorState.h"
+#include "ErrorMessageState.h"
 #include "../Battlescape/BattlescapeState.h"
+#include "../Mod/Mod.h"
+#include "../Engine/Sound.h"
+#include "../Mod/RuleInterface.h"
+#include "StatisticsState.h"
 
 namespace OpenXcom
 {
@@ -42,59 +41,41 @@ namespace OpenXcom
 /**
  * Initializes all the elements in the Load Game screen.
  * @param game Pointer to the core game.
+ * @param origin Game section that originated this state.
+ * @param filename Name of the save file without extension.
+ * @param palette Parent state palette.
  */
-LoadGameState::LoadGameState(Game *game) : State(game)
+LoadGameState::LoadGameState(OptionsOrigin origin, const std::string &filename, SDL_Color *palette) : _firstRun(0), _origin(origin), _filename(filename)
 {
-	// Create objects
-	_window = new Window(this, 320, 200, 0, 0, POPUP_BOTH);
-	_btnCancel = new TextButton(80, 16, 120, 172);
-	_txtTitle = new Text(310, 16, 5, 8);
-	_txtName = new Text(150, 9, 16, 24);
-	_txtTime = new Text(30, 9, 184, 24);
-	_txtDate = new Text(30, 9, 214, 24);
-	_lstSaves = new TextList(288, 128, 8, 32);
+	buildUi(palette);
+}
+
+/**
+ * Initializes all the elements in the Load Game screen.
+ * @param game Pointer to the core game.
+ * @param origin Game section that originated this state.
+ * @param type Type of auto-load being used.
+ * @param palette Parent state palette.
+ */
+LoadGameState::LoadGameState(OptionsOrigin origin, SaveType type, SDL_Color *palette) : _firstRun(0), _origin(origin)
+{
+	switch (type)
+	{
+	case SAVE_QUICK:
+		_filename = SavedGame::QUICKSAVE;
+		break;
+	case SAVE_AUTO_GEOSCAPE:
+		_filename = SavedGame::AUTOSAVE_GEOSCAPE;
+		break;
+	case SAVE_AUTO_BATTLESCAPE:
+		_filename = SavedGame::AUTOSAVE_BATTLESCAPE;
+		break;
+	default:
+		// can't auto-load ironman games
+		break;
+	}
 	
-	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(6)), Palette::backPos, 16);
-
-	add(_window);
-	add(_btnCancel);
-	add(_txtTitle);
-	add(_txtName);
-	add(_txtTime);
-	add(_txtDate);
-	add(_lstSaves);
-
-	// Set up objects
-	_window->setColor(Palette::blockOffset(8)+8);
-	_window->setBackground(game->getResourcePack()->getSurface("BACK01.SCR"));
-
-	_btnCancel->setColor(Palette::blockOffset(8)+8);
-	_btnCancel->setText(_game->getLanguage()->getString("STR_CANCEL_UC"));
-	_btnCancel->onMouseClick((ActionHandler)&LoadGameState::btnCancelClick);
-
-	_txtTitle->setColor(Palette::blockOffset(15)-1);
-	_txtTitle->setBig();
-	_txtTitle->setAlign(ALIGN_CENTER);
-	_txtTitle->setText(_game->getLanguage()->getString("STR_SELECT_GAME_TO_LOAD"));
-
-	_txtName->setColor(Palette::blockOffset(15)-1);
-	_txtName->setText(_game->getLanguage()->getString("STR_NAME"));
-
-	_txtTime->setColor(Palette::blockOffset(15)-1);
-	_txtTime->setText(_game->getLanguage()->getString("STR_TIME"));
-
-	_txtDate->setColor(Palette::blockOffset(15)-1);
-	_txtDate->setText(_game->getLanguage()->getString("STR_DATE"));
-	
-	_lstSaves->setColor(Palette::blockOffset(8)+10);
-	_lstSaves->setArrowColor(Palette::blockOffset(8)+8);
-	_lstSaves->setColumns(5, 168, 30, 30, 30, 30);
-	_lstSaves->setSelectable(true);
-	_lstSaves->setBackground(_window);
-	_lstSaves->setMargin(8);
-	_lstSaves->onMouseClick((ActionHandler)&LoadGameState::lstSavesClick);
-	SavedGame::getList(_lstSaves, _game->getLanguage());
+	buildUi(palette);
 }
 
 /**
@@ -102,57 +83,136 @@ LoadGameState::LoadGameState(Game *game) : State(game)
  */
 LoadGameState::~LoadGameState()
 {
-	
+
 }
 
 /**
- * Resets the palette since it's bound to change on other screens.
+ * Builds the interface.
+ * @param palette Parent state palette.
+ */
+void LoadGameState::buildUi(SDL_Color *palette)
+{
+	_screen = false;
+
+	// Create objects
+	_txtStatus = new Text(320, 17, 0, 92);
+
+	// Set palette
+	setPalette(palette);
+
+	if (_origin == OPT_BATTLESCAPE)
+	{
+		add(_txtStatus, "textLoad", "battlescape");
+		_txtStatus->setHighContrast(true);
+		if (_game->getSavedGame()->getSavedBattle()->getAmbientSound() != -1)
+		{
+			_game->getMod()->getSoundByDepth(0, _game->getSavedGame()->getSavedBattle()->getAmbientSound())->stopLoop();
+		}
+	}
+	else
+	{
+		add(_txtStatus, "textLoad", "geoscape");
+	}
+
+	centerAllSurfaces();
+
+	// Set up objects
+	_txtStatus->setBig();
+	_txtStatus->setAlign(ALIGN_CENTER);
+	_txtStatus->setText(tr("STR_LOADING_GAME"));
+
+}
+
+/**
+ * Ignore quick loads without a save available.
  */
 void LoadGameState::init()
 {
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(6)), Palette::backPos, 16);
+	State::init();
+	if (_filename == SavedGame::QUICKSAVE && !CrossPlatform::fileExists(Options::getMasterUserFolder() + _filename))
+	{
+		_game->popState();
+		return;
+	}
 }
 
 /**
- * Returns to the previous screen.
- * @param action Pointer to an action.
+ * Loads the specified save.
  */
-void LoadGameState::btnCancelClick(Action *action)
+void LoadGameState::think()
 {
-	_game->popState();
-}
+	State::think();
+	// Make sure it gets drawn properly
+	if (_firstRun < 10)
+	{
+		_firstRun++;
+	}
+	else
+	{
+		_game->popState();
 
-/**
- * Loads the selected save.
- * @param action Pointer to an action.
- */
-void LoadGameState::lstSavesClick(Action *action)
-{
-	try
-	{
-		_game->setRuleset(new XcomRuleset());
-		SavedGame *s = new SavedGame(DIFF_BEGINNER);
-		s->load(Language::wstrToUtf8(_lstSaves->getCell(_lstSaves->getSelectedRow(), 0)->getText()), _game->getRuleset());
-		_game->setSavedGame(s);
-		if (_game->getSavedGame()->getBattleGame() == 0)
+		// Load the game
+		SavedGame *s = new SavedGame();
+		try
 		{
-			_game->setState(new GeoscapeState(_game));
+			s->load(_filename, _game->getMod());
+			_game->setSavedGame(s);
+			if (_game->getSavedGame()->getEnding() != END_NONE)
+			{
+				Options::baseXResolution = Screen::ORIGINAL_WIDTH;
+				Options::baseYResolution = Screen::ORIGINAL_HEIGHT;
+				_game->getScreen()->resetDisplay(false);
+				_game->setState(new StatisticsState);
+			}
+			else
+			{
+				Options::baseXResolution = Options::baseXGeoscape;
+				Options::baseYResolution = Options::baseYGeoscape;
+				_game->getScreen()->resetDisplay(false);
+				_game->setState(new GeoscapeState);
+				if (_game->getSavedGame()->getSavedBattle() != 0)
+				{
+					_game->getSavedGame()->getSavedBattle()->loadMapResources(_game->getMod());
+					Options::baseXResolution = Options::baseXBattlescape;
+					Options::baseYResolution = Options::baseYBattlescape;
+					_game->getScreen()->resetDisplay(false);
+					BattlescapeState *bs = new BattlescapeState;
+					_game->pushState(bs);
+					_game->getSavedGame()->getSavedBattle()->setBattleState(bs);
+				}
+			}
 		}
-		else
+		catch (Exception &e)
 		{
-			_game->getSavedGame()->getBattleGame()->loadMapResources(_game->getResourcePack());
-			_game->setState(new BattlescapeState(_game));
+			Log(LOG_ERROR) << e.what();
+			std::wostringstream error;
+			error << tr("STR_LOAD_UNSUCCESSFUL") << L'\x02' << Language::fsToWstr(e.what());
+			if (_origin != OPT_BATTLESCAPE)
+				_game->pushState(new ErrorMessageState(error.str(), _palette, _game->getMod()->getInterface("errorMessages")->getElement("geoscapeColor")->color, "BACK01.SCR", _game->getMod()->getInterface("errorMessages")->getElement("geoscapePalette")->color));
+			else
+				_game->pushState(new ErrorMessageState(error.str(), _palette, _game->getMod()->getInterface("errorMessages")->getElement("battlescapeColor")->color, "TAC00.SCR", _game->getMod()->getInterface("errorMessages")->getElement("battlescapePalette")->color));
+
+			if (_game->getSavedGame() == s)
+				_game->setSavedGame(0);
+			else
+				delete s;
 		}
-	}
-	catch (Exception &e)
-	{
-		std::cerr << "ERROR: " << e.what() << std::endl;
-		_game->pushState(new GeoscapeErrorState(_game, "STR_LOAD_UNSUCCESSFUL"));
-	}
-	catch (YAML::Exception &e)
-	{
-		std::cerr << "ERROR: " << e.what() << std::endl;
-		_game->pushState(new GeoscapeErrorState(_game, "STR_LOAD_UNSUCCESSFUL"));
+		catch (YAML::Exception &e)
+		{
+			Log(LOG_ERROR) << e.what();
+			std::wostringstream error;
+			error << tr("STR_LOAD_UNSUCCESSFUL") << L'\x02' << Language::fsToWstr(e.what());
+			if (_origin != OPT_BATTLESCAPE)
+				_game->pushState(new ErrorMessageState(error.str(), _palette, _game->getMod()->getInterface("errorMessages")->getElement("geoscapeColor")->color, "BACK01.SCR", _game->getMod()->getInterface("errorMessages")->getElement("geoscapePalette")->color));
+			else
+				_game->pushState(new ErrorMessageState(error.str(), _palette, _game->getMod()->getInterface("errorMessages")->getElement("battlescapeColor")->color, "TAC00.SCR", _game->getMod()->getInterface("errorMessages")->getElement("battlescapePalette")->color));
+
+			if (_game->getSavedGame() == s)
+				_game->setSavedGame(0);
+			else
+				delete s;
+		}
+		CrossPlatform::flashWindow();
 	}
 }
 

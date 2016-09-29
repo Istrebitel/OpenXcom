@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -29,7 +29,7 @@ namespace OpenXcom
  * @param width Frame width in pixels.
  * @param height Frame height in pixels.
  */
-SurfaceSet::SurfaceSet(int width, int height) : _width(width), _height(height), _frames()
+SurfaceSet::SurfaceSet(int width, int height) : _width(width), _height(height)
 {
 
 }
@@ -42,10 +42,10 @@ SurfaceSet::SurfaceSet(const SurfaceSet& other)
 {
 	_width = other._width;
 	_height = other._height;
-
-	for (unsigned int f = 0; f < other._frames.size(); f++)
+	
+	for (std::map<int, Surface*>::const_iterator f = other._frames.begin(); f != other._frames.end(); ++f)
 	{
-		_frames.push_back(new Surface(*other._frames[f]));
+		_frames[f->first] = new Surface(*f->second);
 	}
 }
 
@@ -54,9 +54,9 @@ SurfaceSet::SurfaceSet(const SurfaceSet& other)
  */
 SurfaceSet::~SurfaceSet()
 {
-	for (std::vector<Surface*>::iterator i = _frames.begin(); i != _frames.end(); ++i)
+	for (std::map<int, Surface*>::iterator i = _frames.begin(); i != _frames.end(); ++i)
 	{
-		delete *i;
+		delete i->second;
 	}
 }
 
@@ -74,35 +74,52 @@ void SurfaceSet::loadPck(const std::string &pck, const std::string &tab)
 	int nframes = 0;
 
 	// Load TAB and get image offsets
-	std::ifstream offsetFile (tab.c_str(), std::ios::in | std::ios::binary);
-	if (!offsetFile)
+	if (!tab.empty())
 	{
-		nframes = 1;
-		Surface *surface = new Surface(_width, _height);
-		_frames.push_back(surface);
+		std::ifstream offsetFile(tab.c_str(), std::ios::in | std::ios::binary);
+		if (!offsetFile)
+		{
+			throw Exception(tab + " not found");
+		}
+		std::streampos begin, end;
+		begin = offsetFile.tellg();
+		int off;
+		offsetFile.read((char*)&off, sizeof(off));
+		offsetFile.seekg(0, std::ios::end);
+		end = offsetFile.tellg();
+		int size = end - begin;
+		// 16-bit offsets
+		if (off != 0)
+		{
+			nframes = size / 2;
+		}
+		// 32-bit offsets
+		else
+		{
+			nframes = size / 4;
+		}
+		offsetFile.close();
+		for (int frame = 0; frame < nframes; ++frame)
+		{
+			_frames[frame] = new Surface(_width, _height);
+		}
 	}
 	else
 	{
-		Uint16 off;
-
-		while (offsetFile.read((char*)&off, sizeof(off)))
-		{
-			Surface *surface = new Surface(_width, _height);
-			_frames.push_back(surface);
-			nframes++;
-		}
+		nframes = 1;
+		_frames[0] = new Surface(_width, _height);
 	}
 
-	// Load PCX and put pixels in surfaces
-    std::ifstream imgFile (pck.c_str(), std::ios::in | std::ios::binary);
+	// Load PCK and put pixels in surfaces
+	std::ifstream imgFile (pck.c_str(), std::ios::in | std::ios::binary);
 	if (!imgFile)
 	{
-		throw Exception("Failed to load PCK");
+		throw Exception(pck + " not found");
 	}
 
 	Uint8 value;
 
-	for (int frame = 0; frame < nframes; frame++)
+	for (int frame = 0; frame < nframes; ++frame)
 	{
 		int x = 0, y = 0;
 
@@ -110,9 +127,9 @@ void SurfaceSet::loadPck(const std::string &pck, const std::string &tab)
 		_frames[frame]->lock();
 
 		imgFile.read((char*)&value, 1);
-		for (int i = 0; i < value; i++)
+		for (int i = 0; i < value; ++i)
 		{
-			for (int j = 0; j < _width; j++)
+			for (int j = 0; j < _width; ++j)
 			{
 				_frames[frame]->setPixelIterative(&x, &y, 0);
 			}
@@ -123,7 +140,7 @@ void SurfaceSet::loadPck(const std::string &pck, const std::string &tab)
 			if (value == 254)
 			{
 				imgFile.read((char*)&value, 1);
-				for (int i = 0; i < value; i++)
+				for (int i = 0; i < value; ++i)
 				{
 					_frames[frame]->setPixelIterative(&x, &y, 0);
 				}
@@ -139,7 +156,6 @@ void SurfaceSet::loadPck(const std::string &pck, const std::string &tab)
 	}
 
 	imgFile.close();
-	offsetFile.close();
 }
 
 /**
@@ -158,7 +174,7 @@ void SurfaceSet::loadDat(const std::string &filename)
 	std::ifstream imgFile (filename.c_str(), std::ios::in | std::ios::binary);
 	if (!imgFile)
 	{
-		throw Exception("Failed to load DAT");
+		throw Exception(filename + " not found");
 	}
 
 	imgFile.seekg(0, std::ios::end);
@@ -167,10 +183,10 @@ void SurfaceSet::loadDat(const std::string &filename)
 
 	nframes = (int)size / (_width * _height);
 
-	for (int i = 0; i < nframes; i++)
+	for (int i = 0; i < nframes; ++i)
 	{
 		Surface *surface = new Surface(_width, _height);
-		_frames.push_back(surface);
+		_frames[i] = surface;
 	}
 
 	Uint8 value;
@@ -207,8 +223,23 @@ void SurfaceSet::loadDat(const std::string &filename)
  * @param i Frame number in the set.
  * @return Pointer to the respective surface.
  */
-Surface *const SurfaceSet::getFrame(int i) const
+Surface *SurfaceSet::getFrame(int i)
 {
+	if (_frames.find(i) != _frames.end())
+	{
+		return _frames[i];
+	}
+	return 0;
+}
+
+/**
+ * Creates and returns a particular frame in the surface set.
+ * @param i Frame number in the set.
+ * @return Pointer to the respective surface.
+ */
+Surface *SurfaceSet::addFrame(int i)
+{
+	_frames[i] = new Surface(_width, _height);
 	return _frames[i];
 }
 
@@ -235,7 +266,7 @@ int SurfaceSet::getHeight() const
  * stored in the set.
  * @return Number of frames.
  */
-int SurfaceSet::getTotalFrames() const
+size_t SurfaceSet::getTotalFrames() const
 {
 	return _frames.size();
 }
@@ -248,10 +279,15 @@ int SurfaceSet::getTotalFrames() const
  */
 void SurfaceSet::setPalette(SDL_Color *colors, int firstcolor, int ncolors)
 {
-	for (std::vector<Surface*>::iterator i = _frames.begin(); i != _frames.end(); ++i)
+	for (std::map<int, Surface*>::iterator i = _frames.begin(); i != _frames.end(); ++i)
 	{
-		(*i)->setPalette(colors, firstcolor, ncolors);
+		(*i).second->setPalette(colors, firstcolor, ncolors);
 	}
+}
+
+std::map<int, Surface*> *SurfaceSet::getFrames()
+{
+	return &_frames;
 }
 
 }

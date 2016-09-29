@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,82 +18,82 @@
  */
 
 #include <sstream>
-
-#include "Ufopaedia.h"
 #include "ArticleStateCraftWeapon.h"
-#include "../Ruleset/ArticleDefinition.h"
-#include "../Ruleset/RuleCraftWeapon.h"
+#include "../Mod/ArticleDefinition.h"
+#include "../Mod/Mod.h"
+#include "../Mod/RuleCraftWeapon.h"
 #include "../Engine/Game.h"
 #include "../Engine/Palette.h"
 #include "../Engine/Surface.h"
-#include "../Engine/Language.h"
-#include "../Resource/ResourcePack.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/TextList.h"
 
 namespace OpenXcom
 {
-	
-	ArticleStateCraftWeapon::ArticleStateCraftWeapon(Game *game, ArticleDefinitionCraftWeapon *defs) : ArticleState(game, defs->id)
+
+	ArticleStateCraftWeapon::ArticleStateCraftWeapon(ArticleDefinitionCraftWeapon *defs) : ArticleState(defs->id)
 	{
+		RuleCraftWeapon *weapon = _game->getMod()->getCraftWeapon(defs->id);
+
 		// add screen elements
-		_txtTitle = new Text(140, 32, 5, 24);
-		
+		_txtTitle = new Text(200, 32, 5, 24);
+
 		// Set palette
-		_game->setPalette(_game->getResourcePack()->getPalette("PALETTES.DAT_4")->getColors());
-		
+		setPalette("PAL_BATTLEPEDIA");
+
 		ArticleState::initLayout();
-		
+
 		// add other elements
 		add(_txtTitle);
-		
+
 		// Set up objects
-		_game->getResourcePack()->getSurface(defs->image_id)->blit(_bg);
-		_btnOk->setColor(Palette::blockOffset(1)+2);
-		_btnPrev->setColor(Palette::blockOffset(1)+2);
-		_btnNext->setColor(Palette::blockOffset(1)+2);
-		
+		_game->getMod()->getSurface(defs->image_id)->blit(_bg);
+		_btnOk->setColor(Palette::blockOffset(1));
+		_btnPrev->setColor(Palette::blockOffset(1));
+		_btnNext->setColor(Palette::blockOffset(1));
+
 		_txtTitle->setColor(Palette::blockOffset(14)+15);
 		_txtTitle->setBig();
-		_txtTitle->setAlign(ALIGN_LEFT);
 		_txtTitle->setWordWrap(true);
-		_txtTitle->setText(Ufopaedia::buildText(_game, defs->title));
-		
-		_lstInfo = new TextList(210, 111, 5, 80);
+		_txtTitle->setText(tr(defs->title));
+
+		_txtInfo = new Text(310, 32, 5, 160);
+		add(_txtInfo);
+
+		_txtInfo->setColor(Palette::blockOffset(14)+15);
+		_txtInfo->setWordWrap(true);
+		_txtInfo->setText(tr(defs->text));
+
+		_lstInfo = new TextList(250, 111, 5, 80);
 		add(_lstInfo);
-		
-		std::wstringstream ss;
+
+
 		_lstInfo->setColor(Palette::blockOffset(14)+15);
-		_lstInfo->setColumns(2, 134, 70);
+		_lstInfo->setColumns(2, 180, 70);
 		_lstInfo->setDot(true);
 		_lstInfo->setBig();
-		
-		ss.str(L"");ss.clear();
-		ss << defs->weapon->getDamage();
-		
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_DAMAGE").c_str(), ss.str().c_str());
-		_lstInfo->getCell(0, 1)->setColor(Palette::blockOffset(15)+4);
-		
-		ss.str(L"");ss.clear();
-		ss << defs->weapon->getRange() << _game->getLanguage()->getString("STR_KM").c_str();
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_RANGE").c_str(), ss.str().c_str());
-		_lstInfo->getCell(1, 1)->setColor(Palette::blockOffset(15)+4);
-		
-		ss.str(L"");ss.clear();
-		ss << defs->weapon->getAccuracy() << "%";
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_ACCURACY").c_str(), ss.str().c_str());
-		_lstInfo->getCell(2, 1)->setColor(Palette::blockOffset(15)+4);
-		
-		ss.str(L"");ss.clear();
-		ss << defs->weapon->getStandardReload() << _game->getLanguage()->getString("STR_S").c_str();
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_RE_LOAD_TIME").c_str(), ss.str().c_str());
-		_lstInfo->getCell(3, 1)->setColor(Palette::blockOffset(15)+4);
-		
-		_lstInfo->draw();
+
+		_lstInfo->addRow(2, tr("STR_DAMAGE").c_str(), Text::formatNumber(weapon->getDamage()).c_str());
+		_lstInfo->setCellColor(0, 1, Palette::blockOffset(15)+4);
+
+		_lstInfo->addRow(2, tr("STR_RANGE").c_str(), tr("STR_KILOMETERS").arg(weapon->getRange()).c_str());
+		_lstInfo->setCellColor(1, 1, Palette::blockOffset(15)+4);
+
+		_lstInfo->addRow(2, tr("STR_ACCURACY").c_str(), Text::formatPercentage(weapon->getAccuracy()).c_str());
+		_lstInfo->setCellColor(2, 1, Palette::blockOffset(15)+4);
+
+		_lstInfo->addRow(2, tr("STR_RE_LOAD_TIME").c_str(), tr("STR_SECONDS").arg(weapon->getStandardReload()).c_str());
+		_lstInfo->setCellColor(3, 1, Palette::blockOffset(15)+4);
+
+		_lstInfo->addRow(2, tr("STR_ROUNDS").c_str(), Text::formatNumber(weapon->getAmmoMax()).c_str());
+		_lstInfo->setCellColor(4, 1, Palette::blockOffset(15)+4);
+
+		centerAllSurfaces();
 	}
-	
+
 	ArticleStateCraftWeapon::~ArticleStateCraftWeapon()
 	{}
-	
+
 }

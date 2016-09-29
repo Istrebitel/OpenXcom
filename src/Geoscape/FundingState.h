@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_FUNDINGSTATE_H
-#define OPENXCOM_FUNDINGSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -42,7 +40,7 @@ private:
 	TextList *_lstCountries;
 public:
 	/// Creates the Funding state.
-	FundingState(Game *game);
+	FundingState();
 	/// Cleans up the Funding state.
 	~FundingState();
 	/// Handler for clicking the OK button.
@@ -50,5 +48,3 @@ public:
 };
 
 }
-
-#endif

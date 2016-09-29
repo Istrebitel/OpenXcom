@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,37 +18,54 @@
  */
 #include "ActionMenuItem.h"
 #include "../Interface/Text.h"
-#include "../Engine/Palette.h"
+#include "../Interface/Frame.h"
+#include "../Engine/Game.h"
+#include "../Mod/Mod.h"
+#include "../Mod/RuleInterface.h"
 
 namespace OpenXcom
 {
 
 /**
  * Sets up an Action menu item.
- * @param state the parent state.
- * @param id the id.
- * @param bigFont pointer to the font.
+ * @param id The unique identifier of the menu item.
+ * @param game Pointer to the game.
+ * @param x Position on the x-axis.
+ * @param y Position on the y-asis.
  */
-ActionMenuItem::ActionMenuItem(State *state, int id, Font *bigFont) : InteractiveSurface(270, 40, 25, 160 - (id*40)), _id(id), _highlighted(false)
+ActionMenuItem::ActionMenuItem(int id, Game *game, int x, int y) : InteractiveSurface(272, 40, x + 24, y - (id*40)), _highlighted(false), _action(BA_NONE), _tu(0)
 {
-	_txtDescription = new Text(150, 20, 16, 13);
-	_txtDescription->setFonts(bigFont, 0);
+	Font *big = game->getMod()->getFont("FONT_BIG"), *small = game->getMod()->getFont("FONT_SMALL");
+	Language *lang = game->getLanguage();
+
+	Element *actionMenu = game->getMod()->getInterface("battlescape")->getElement("actionMenu");
+
+	_highlightModifier = actionMenu->TFTDMode ? 12 : 3;
+
+	_frame = new Frame(getWidth(), getHeight(), 0, 0);
+	_frame->setHighContrast(true);
+	_frame->setColor(actionMenu->border);
+	_frame->setSecondaryColor(actionMenu->color2);
+	_frame->setThickness(8);
+
+	_txtDescription = new Text(200, 20, 10, 13);
+	_txtDescription->initText(big, small, lang);
 	_txtDescription->setBig();
 	_txtDescription->setHighContrast(true);
-	_txtDescription->setColor(Palette::blockOffset(0)-1);
+	_txtDescription->setColor(actionMenu->color);
 	_txtDescription->setVisible(true);
 
-	_txtAcc = new Text(100, 20, 126, 13);
-	_txtAcc->setFonts(bigFont, 0);
+	_txtAcc = new Text(100, 20, 140, 13);
+	_txtAcc->initText(big, small, lang);
 	_txtAcc->setBig();
 	_txtAcc->setHighContrast(true);
-	_txtAcc->setColor(Palette::blockOffset(0)-1);
+	_txtAcc->setColor(actionMenu->color);
 
-	_txtTU = new Text(100, 20, 195, 13);
-	_txtTU->setFonts(bigFont, 0);
+	_txtTU = new Text(80, 20, 210, 13);
+	_txtTU->initText(big, small, lang);
 	_txtTU->setBig();
 	_txtTU->setHighContrast(true);
-	_txtTU->setColor(Palette::blockOffset(0)-1);
+	_txtTU->setColor(actionMenu->color);
 }
 
 /**
@@ -56,43 +73,44 @@ ActionMenuItem::ActionMenuItem(State *state, int id, Font *bigFont) : Interactiv
  */
 ActionMenuItem::~ActionMenuItem()
 {
-
+	delete _frame;
+	delete _txtDescription;
+	delete _txtAcc;
+	delete _txtTU;
 }
 
 /**
- * Link with an action and fill in the text fields.
- * @param action the battlescape action
- * @param description the actions description
- * @param accuracy the actions accuracy, including the Acc> prefix
- * @param timeunits the timeunits string, incliding the TUs> prefix
+ * Links with an action and fills in the text fields.
+ * @param action The battlescape action.
+ * @param description The actions description.
+ * @param accuracy The actions accuracy, including the Acc> prefix.
+ * @param timeunits The timeunits string, including the TUs> prefix.
+ * @param tu The timeunits value.
  */
-void ActionMenuItem::setAction(BattleActionType action, std::wstring description, std::wstring accuracy, std::wstring timeunits, int tu)
+void ActionMenuItem::setAction(BattleActionType action, const std::wstring &description, const std::wstring &accuracy, const std::wstring &timeunits, int tu)
 {
 	_action = action;
 	_txtDescription->setText(description);
-	if (accuracy.length())
-		_txtAcc->setText(accuracy);
-	else
-		_txtAcc->setVisible(false);
+	_txtAcc->setText(accuracy);
 	_txtTU->setText(timeunits);
 	_tu = tu;
-	draw();
+	_redraw = true;
 }
 
 /**
- * Get the action that was linked to this menu item.
- * @return action
+ * Gets the action that was linked to this menu item.
+ * @return Action that was linked to this menu item.
  */
-BattleActionType ActionMenuItem::getAction()
+BattleActionType ActionMenuItem::getAction() const
 {
 	return _action;
 }
 
 /**
- * Get the action tus that was linked to this menu item.
- * @return tu
+ * Gets the action tus that were linked to this menu item.
+ * @return The timeunits that were linked to this menu item.
  */
-int ActionMenuItem::getTUs()
+int ActionMenuItem::getTUs() const
 {
 	return _tu;
 }
@@ -106,6 +124,7 @@ int ActionMenuItem::getTUs()
 void ActionMenuItem::setPalette(SDL_Color *colors, int firstcolor, int ncolors)
 {
 	Surface::setPalette(colors, firstcolor, ncolors);
+	_frame->setPalette(colors, firstcolor, ncolors);
 	_txtDescription->setPalette(colors, firstcolor, ncolors);
 	_txtAcc->setPalette(colors, firstcolor, ncolors);
 	_txtTU->setPalette(colors, firstcolor, ncolors);
@@ -116,55 +135,21 @@ void ActionMenuItem::setPalette(SDL_Color *colors, int firstcolor, int ncolors)
  */
 void ActionMenuItem::draw()
 {
-	SDL_Rect square;
-	Uint8 color = 11;
-
-	clear();
-
-	square.x = 0;
-	square.w = getWidth();
-
-	square.y = 0;
-	square.h = getHeight();
-
-	for (int i = 0; i < 9; ++i)
-	{
-		if (i == 8 && _highlighted)
-			color -= 4;
-		drawRect(&square, color);
-		if (i < 3)
-			color-=2;
-		else
-			color+=2;
-		square.x++;
-		square.y++;
-		if (square.w >= 2)
-			square.w -= 2;
-		else
-			square.w = 1;
-
-		if (square.h >= 2)
-			square.h -= 2;
-		else
-			square.h = 1;
-	}
-
-	_txtDescription->draw();
+	_frame->blit(this);
 	_txtDescription->blit(this);
-	_txtAcc->draw();
 	_txtAcc->blit(this);
-	_txtTU->draw();
 	_txtTU->blit(this);
 }
 
 /**
  * Processes a mouse hover in event.
  * @param action Pointer to an action.
- * @param state Pointer to an state.
+ * @param state Pointer to a state.
  */
 void ActionMenuItem::mouseIn(Action *action, State *state)
 {
 	_highlighted = true;
+	_frame->setSecondaryColor(_frame->getSecondaryColor() - _highlightModifier);
 	draw();
 	InteractiveSurface::mouseIn(action, state);
 }
@@ -173,11 +158,12 @@ void ActionMenuItem::mouseIn(Action *action, State *state)
 /**
  * Processes a mouse hover out event.
  * @param action Pointer to an action.
- * @param state Pointer to an state.
+ * @param state Pointer to a state.
  */
 void ActionMenuItem::mouseOut(Action *action, State *state)
 {
 	_highlighted = false;
+	_frame->setSecondaryColor(_frame->getSecondaryColor() + _highlightModifier);
 	draw();
 	InteractiveSurface::mouseOut(action, state);
 }

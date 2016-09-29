@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_CRAFTWEAPONSSTATE_H
-#define OPENXCOM_CRAFTWEAPONSSTATE_H
-
 #include <vector>
 #include "../Engine/State.h"
 
@@ -33,23 +31,23 @@ class TextList;
 class RuleCraftWeapon;
 
 /**
- * Select Armament window that allows to
- * change the weapon equipped on a craft.
+ * Select Armament window for
+ * changing the weapon equipped on a craft.
  */
 class CraftWeaponsState : public State
 {
 private:
 	Base *_base;
-	unsigned int _craft, _weapon;
+	size_t _craft, _weapon;
 
 	TextButton *_btnCancel;
 	Window *_window;
-	Text *_txtTitle, *_txtArmament, *_txtQuantity, *_txtAmmunition, *_txtAvailable;
+	Text *_txtTitle, *_txtArmament, *_txtQuantity, *_txtAmmunition;
 	TextList *_lstWeapons;
 	std::vector<RuleCraftWeapon*> _weapons;
 public:
 	/// Creates the Craft Weapons state.
-	CraftWeaponsState(Game *game, Base *base, unsigned int craft, unsigned int weapon);
+	CraftWeaponsState(Base *base, size_t craft, size_t weapon);
 	/// Cleans up the Craft Weapons state.
 	~CraftWeaponsState();
 	/// Handler for clicking the Cancel button.
@@ -59,5 +57,3 @@ public:
 };
 
 }
-
-#endif

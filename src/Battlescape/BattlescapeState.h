@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,12 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http:///www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_BATTLESCAPESTATE_H
-#define OPENXCOM_BATTLESCAPESTATE_H
-
 #include "../Engine/State.h"
 #include "Position.h"
-#include <list>
+
+#include <vector>
 #include <string>
 
 namespace OpenXcom
@@ -30,6 +29,7 @@ namespace OpenXcom
 class Surface;
 class Map;
 class ImageButton;
+class BattlescapeButton;
 class InteractiveSurface;
 class Text;
 class Bar;
@@ -37,82 +37,80 @@ class NumberText;
 class BattleUnit;
 class SavedBattleGame;
 class BattleItem;
-class Window;
-class BattleState;
 class Timer;
-class ActionMenuItem;
-
-enum BattleActionType { BA_NONE, BA_PRIME, BA_THROW, BA_AUTOSHOT, BA_SNAPSHOT, BA_AIMEDSHOT, BA_STUN, BA_HIT };
-
-#define DEFAULT_WALK_SPEED 40
-#define DEFAULT_BULLET_SPEED 20
-#define DEFAULT_ANIM_SPEED 100
-#define ALT_GRENADE false // set to true if you want to play with the alternative grenade handling
-
-struct BattleAction
-{
-	BattleActionType type;
-	BattleUnit *actor;
-	BattleItem *weapon;
-	Position target;
-	int TU;
-	bool targeting;
-	int value;
-};
-
+class WarningMessage;
+class BattlescapeGame;
 
 /**
- * Battlescape screen which shows the tactical battle
+ * Battlescape screen which shows the tactical battle.
  */
 class BattlescapeState : public State
 {
 private:
-	Surface *_icons, *_rank;
+	Surface *_rank;
+	InteractiveSurface *_icons;
 	Map *_map;
-	InteractiveSurface *_btnUnitUp, *_btnUnitDown, *_btnMapUp, *_btnMapDown, *_btnShowMap, *_btnKneel;
-	InteractiveSurface *_btnInventory, *_btnCenter, *_btnNextSoldier, *_btnNextStop, *_btnShowLayers, *_btnHelp;
-	InteractiveSurface *_btnEndTurn, *_btnAbort, *_btnStats;
-	ImageButton *_reserve;
-	ImageButton *_btnReserveNone, *_btnReserveSnap, *_btnReserveAimed, *_btnReserveAuto;
+	BattlescapeButton *_btnUnitUp, *_btnUnitDown, *_btnMapUp, *_btnMapDown, *_btnShowMap, *_btnKneel;
+	BattlescapeButton *_btnInventory, *_btnCenter, *_btnNextSoldier, *_btnNextStop, *_btnShowLayers, *_btnHelp;
+	BattlescapeButton *_btnEndTurn, *_btnAbort, *_btnLaunch, *_btnPsi, *_reserve;
+	InteractiveSurface *_btnStats;
+	BattlescapeButton *_btnReserveNone, *_btnReserveSnap, *_btnReserveAimed, *_btnReserveAuto, *_btnReserveKneel, *_btnZeroTUs;
 	InteractiveSurface *_btnLeftHandItem, *_btnRightHandItem;
-	InteractiveSurface *_btnVisibleUnit[10];
-	NumberText *_numVisibleUnit[10];
-	BattleUnit *_visibleUnit[10];
-	Surface *_warningMessageBackground;
-	Text *_txtWarningMessage;
-
+	static const int VISIBLE_MAX = 10;
+	InteractiveSurface *_btnVisibleUnit[VISIBLE_MAX];
+	NumberText *_numVisibleUnit[VISIBLE_MAX];
+	BattleUnit *_visibleUnit[VISIBLE_MAX];
+	WarningMessage *_warning;
 	Text *_txtName;
 	NumberText *_numTimeUnits, *_numEnergy, *_numHealth, *_numMorale, *_numLayers, *_numAmmoLeft, *_numAmmoRight;
 	Bar *_barTimeUnits, *_barEnergy, *_barHealth, *_barMorale;
-	Timer *_stateTimer, *_animTimer;
-	SavedBattleGame *_battleGame;
-	Text *_txtDebug;
-	int _animFrame;
-	std::list<BattleState*> _states;
-	BattleAction _action;
-	BattleActionType _tuReserved;
-	
-	void endTurn();
-	void handleItemClick(BattleItem *item);
-	void drawItemSprite(BattleItem *item, Surface *surface);
-	void blinkVisibleUnitButtons();
-	void blinkWarningMessage();
-	void showWarningMessage(std::string message);
-	//Handles non target actions, like priming a grenade.
-	void handleNonTargetAction();
-	void setupCursor();
+	Timer *_animTimer, *_gameTimer;
+	SavedBattleGame *_save;
+	Text *_txtDebug, *_txtTooltip;
 	std::vector<State*> _popups;
+	BattlescapeGame *_battleGame;
+	bool _firstInit;
+	bool _isMouseScrolling, _isMouseScrolled;
+	int _xBeforeMouseScrolling, _yBeforeMouseScrolling;
+	Position _mapOffsetBeforeMouseScrolling;
+	Uint32 _mouseScrollingStartTime;
+	int _totalMouseMoveX, _totalMouseMoveY;
+	bool _mouseMovedOverThreshold;
+	bool _mouseOverIcons;
+	std::string _currentTooltip;
+	Position _cursorPosition;
+	Uint8 _barHealthColor;
+	bool _autosave;
+	/// Popups a context sensitive list of actions the user can choose from.
+	void handleItemClick(BattleItem *item);
+	/// Shifts the red colors of the visible unit buttons backgrounds.
+	void blinkVisibleUnitButtons();
+	/// Shifts the colors of the health bar when unit has fatal wounds.
+	void blinkHealthBar();
+	/// Shows the unit kneel state.
+	void toggleKneelButton(BattleUnit* unit);
 public:
+	/// Selects the next soldier.
+	void selectNextPlayerUnit(bool checkReselect = false, bool setReselect = false, bool checkInventory = false);
+	/// Selects the previous soldier.
+	void selectPreviousPlayerUnit(bool checkReselect = false, bool setReselect = false, bool checkInventory = false);
+	static const int DEFAULT_ANIM_SPEED = 100;
 	/// Creates the Battlescape state.
-	BattlescapeState(Game *game);
+	BattlescapeState();
 	/// Cleans up the Battlescape state.
 	~BattlescapeState();
-	/// init
+	/// Initializes the battlescapestate.
 	void init();
-	/// think
+	/// Runs the timers and handles popups.
 	void think();
+	/// Handler for moving mouse over the map.
+	void mapOver(Action *action);
+	/// Handler for pressing the map.
+	void mapPress(Action *action);
 	/// Handler for clicking the map.
 	void mapClick(Action *action);
+	/// Handler for entering with mouse to the map surface.
+	void mapIn(Action *action);
 	/// Handler for clicking the Unit Up button.
 	void btnUnitUpClick(Action *action);
 	/// Handler for clicking the Unit Down button.
@@ -133,6 +131,8 @@ public:
 	void btnNextSoldierClick(Action *action);
 	/// Handler for clicking the Next Stop button.
 	void btnNextStopClick(Action *action);
+	/// Handler for clicking the Previous Soldier button.
+	void btnPrevSoldierClick(Action *action);
 	/// Handler for clicking the Show Layers button.
 	void btnShowLayersClick(Action *action);
 	/// Handler for clicking the Help button.
@@ -149,48 +149,76 @@ public:
 	void btnRightHandItemClick(Action *action);
 	/// Handler for clicking a visible unit button.
 	void btnVisibleUnitClick(Action *action);
+	/// Handler for clicking the launch rocket button.
+	void btnLaunchClick(Action *action);
+	/// Handler for clicking the use psi button.
+	void btnPsiClick(Action *action);
 	/// Handler for clicking a reserved button.
-	void btnReserveNoneClick(Action *action);
-	/// Handler for clicking a reserved button.
-	void btnReserveSnapClick(Action *action);
-	/// Handler for clicking a reserved button.
-	void btnReserveAimedClick(Action *action);
-	/// Handler for clicking a reserved button.
-	void btnReserveAutoClick(Action *action);
-	/// updates soldier name/rank/tu/energy/health/morale
-	void updateSoldierInfo(BattleUnit *unit);
-	/// handlestates timer.
-	void handleState();
-	/// Animate other stuff.
+	void btnReserveClick(Action *action);
+	/// Handler for clicking the reload button.
+	void btnReloadClick(Action *action);
+	/// Handler for clicking the lighting button.
+	void btnPersonalLightingClick(Action *action);
+	/// Determines whether a playable unit is selected.
+	bool playableUnitSelected();
+	/// Updates soldier name/rank/tu/energy/health/morale.
+	void updateSoldierInfo();
+	/// Animates map objects on the map, also smoke,fire, ...
 	void animate();
-	/// Get game.
-	Game *getGame() const;
-	/// Get map.
-	Map *getMap() const;
-	/// Push a state at the front of the list.
-	void statePushFront(BattleState *bs);
-	/// Push a state at the second of the list.
-	void statePushNext(BattleState *bs);
-	/// Push a state at the back of the list.
-	void statePushBack(BattleState *bs);
-	/// Remove current state.
-	void popState();
-	/// Set state think interval.
+	/// Handles the battle game state.
+	void handleState();
+	/// Sets the state timer interval.
 	void setStateInterval(Uint32 interval);
-	/// Get a pointer to the current action
-	BattleAction *getAction();
+	/// Gets game.
+	Game *getGame() const;
+	/// Gets map.
+	Map *getMap() const;
 	/// Show debug message.
-	void debug(const std::wstring message);
-	/// Handle keypresses.
+	void debug(const std::wstring &message);
+	/// Show warning message.
+	void warning(const std::string &message);
+	/// Handles keypresses.
 	void handle(Action *action);
 	/// Displays a popup window.
 	void popup(State *state);
-	/// Checks for casualties in battle.
-	void checkForCasualties(BattleItem *murderweapon, BattleUnit *murderer);
-	/// Check reserved tu.
-	bool checkReservedTU(BattleUnit *bu, int tu);
+	/// Finishes a battle.
+	void finishBattle(bool abort, int inExitArea);
+	/// Show the launch button.
+	void showLaunchButton(bool show);
+	/// Shows the PSI button.
+	void showPsiButton(bool show);
+	/// Clears mouse-scrolling state.
+	void clearMouseScrollingState();
+	/// Returns a pointer to the battlegame, in case we need its functions.
+	BattlescapeGame *getBattleGame();
+	/// Saves a map as used by the AI.
+	void saveAIMap();
+	/// Saves each layer of voxels on the bettlescape as a png.
+	void saveVoxelMap();
+	/// Saves a first-person voxel view of the battlescape.
+	void saveVoxelView();
+	/// Handler for the mouse moving over the icons, disables the tile selection cube.
+	void mouseInIcons(Action *action);
+	/// Handler for the mouse going out of the icons, enabling the tile selection cube.
+	void mouseOutIcons(Action *action);
+	/// Checks if the mouse is over the icons.
+	bool getMouseOverIcons() const;
+	/// Is the player allowed to press buttons?
+	bool allowButtons(bool allowSaving = false) const;
+	/// Handler for clicking the reserve TUs to kneel button.
+	void btnReserveKneelClick(Action *action);
+	/// Handler for clicking the expend all TUs button.
+	void btnZeroTUsClick(Action *action);
+	/// Handler for showing tooltip.
+	void txtTooltipIn(Action *action);
+	/// Handler for hiding tooltip.
+	void txtTooltipOut(Action *action);
+	/// Update the resolution settings, we just resized the window.
+	void resize(int &dX, int &dY);
+	/// Move the mouse back to where it started after we finish drag scrolling.
+	void stopScrolling(Action *action);
+	/// Autosave next turn.
+	void autosave();
 };
 
 }
-
-#endif

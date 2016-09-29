@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -19,15 +19,18 @@
 #include "ResearchState.h"
 #include <sstream>
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
+#include "../Engine/Options.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextList.h"
 #include "../Savegame/Base.h"
+#include "NewResearchListState.h"
+#include "../Savegame/ResearchProject.h"
+#include "../Mod/RuleResearch.h"
+#include "ResearchInfoState.h"
 
 namespace OpenXcom
 {
@@ -37,84 +40,67 @@ namespace OpenXcom
  * @param game Pointer to the core game.
  * @param base Pointer to the base to get info from.
  */
-ResearchState::ResearchState(Game *game, Base *base) : State(game), _base(base)
+ResearchState::ResearchState(Base *base) : _base(base)
 {
 	// Create objects
 	_window = new Window(this, 320, 200, 0, 0);
 	_btnNew = new TextButton(148, 16, 8, 176);
 	_btnOk = new TextButton(148, 16, 164, 176);
-	_txtTitle = new Text(310, 16, 5, 8);
-	_txtAvailable = new Text(150, 9, 8, 24);
+	_txtTitle = new Text(310, 17, 5, 8);
+	_txtAvailable = new Text(150, 9, 10, 24);
 	_txtAllocated = new Text(150, 9, 160, 24);
-	_txtSpace = new Text(300, 9, 8, 34);
-	_txtProject = new Text(106, 9, 8, 44);
-	_txtScientists = new Text(144, 9, 115, 44);
-	_txtProgress = new Text(64, 9, 250, 44);
-	_lstResearch = new TextList(288, 120, 8, 54);
-	
-	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(1)), Palette::backPos, 16);
+	_txtSpace = new Text(300, 9, 10, 34);
+	_txtProject = new Text(110, 17, 10, 44);
+	_txtScientists = new Text(106, 17, 120, 44);
+	_txtProgress = new Text(84, 9, 226, 44);
+	_lstResearch = new TextList(288, 112, 8, 62);
 
-	add(_window);
-	add(_btnNew);
-	add(_btnOk);
-	add(_txtTitle);
-	add(_txtAvailable);
-	add(_txtAllocated);
-	add(_txtSpace);
-	add(_txtProject);
-	add(_txtScientists);
-	add(_txtProgress);
-	add(_lstResearch);
+	// Set palette
+	setInterface("researchMenu");
+
+	add(_window, "window", "researchMenu");
+	add(_btnNew, "button", "researchMenu");
+	add(_btnOk, "button", "researchMenu");
+	add(_txtTitle, "text", "researchMenu");
+	add(_txtAvailable, "text", "researchMenu");
+	add(_txtAllocated, "text", "researchMenu");
+	add(_txtSpace, "text", "researchMenu");
+	add(_txtProject, "text", "researchMenu");
+	add(_txtScientists, "text", "researchMenu");
+	add(_txtProgress, "text", "researchMenu");
+	add(_lstResearch, "list", "researchMenu");
+
+	centerAllSurfaces();
 
 	// Set up objects
-	_window->setColor(Palette::blockOffset(13)+13);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK05.SCR"));
-	
-	_btnNew->setColor(Palette::blockOffset(15)+9);
-	_btnNew->setText(_game->getLanguage()->getString("STR_NEW_PROJECT"));
+	_window->setBackground(_game->getMod()->getSurface("BACK05.SCR"));
 
-	_btnOk->setColor(Palette::blockOffset(15)+9);
-	_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+	_btnNew->setText(tr("STR_NEW_PROJECT"));
+	_btnNew->onMouseClick((ActionHandler)&ResearchState::btnNewClick);
+
+	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&ResearchState::btnOkClick);
+	_btnOk->onKeyboardPress((ActionHandler)&ResearchState::btnOkClick, Options::keyCancel);
 
-	_txtTitle->setColor(Palette::blockOffset(13)+10);
 	_txtTitle->setBig();
 	_txtTitle->setAlign(ALIGN_CENTER);
-	_txtTitle->setText(_game->getLanguage()->getString("STR_CURRENT_RESEARCH"));
+	_txtTitle->setText(tr("STR_CURRENT_RESEARCH"));
 
-	_txtAvailable->setColor(Palette::blockOffset(13)+10);
-	_txtAvailable->setSecondaryColor(Palette::blockOffset(13));
-	std::wstringstream ss;
-	ss << _game->getLanguage()->getString("STR_SCIENTISTS_AVAILABLE") << L'\x01' << _base->getAvailableScientists();
-	_txtAvailable->setText(ss.str());
+	_txtProject->setWordWrap(true);
+	_txtProject->setText(tr("STR_RESEARCH_PROJECT"));
 
-	_txtAllocated->setColor(Palette::blockOffset(13)+10);
-	_txtAllocated->setSecondaryColor(Palette::blockOffset(13));
-	std::wstringstream ss2;
-	ss2 << _game->getLanguage()->getString("STR_SCIENTISTS_ALLOCATED") << L'\x01' << (_base->getTotalScientists() - _base->getAvailableScientists());
-	_txtAllocated->setText(ss2.str());
+	_txtScientists->setWordWrap(true);
+	_txtScientists->setText(tr("STR_SCIENTISTS_ALLOCATED_UC"));
 
-	_txtSpace->setColor(Palette::blockOffset(13)+10);
-	_txtSpace->setSecondaryColor(Palette::blockOffset(13));
-	_txtSpace->setText(_game->getLanguage()->getString("STR_LABORATORY_SPACE_AVAILABLE"));
+	_txtProgress->setText(tr("STR_PROGRESS"));
 
-	_txtProject->setColor(Palette::blockOffset(13)+10);
-	_txtProject->setText(_game->getLanguage()->getString("STR_RESEARCH_PROJECT"));
-
-	_txtScientists->setColor(Palette::blockOffset(13)+10);
-	_txtScientists->setText(_game->getLanguage()->getString("STR_SCIENTISTS_ALLOCATED_UC"));
-
-	_txtProgress->setColor(Palette::blockOffset(13)+10);
-	_txtProgress->setText(_game->getLanguage()->getString("STR_PROGRESS"));
-
-	_lstResearch->setColor(Palette::blockOffset(15)+6);
-	_lstResearch->setArrowColor(Palette::blockOffset(13)+13);
-	_lstResearch->setColumns(3, 158, 82, 46);
+	_lstResearch->setColumns(3, 158, 58, 70);
 	_lstResearch->setSelectable(true);
 	_lstResearch->setBackground(_window);
 	_lstResearch->setMargin(2);
-	_lstResearch->addRow(3, "Laser Weapons", "30", "Good");
+	_lstResearch->setWordWrap(true);
+	_lstResearch->onMouseClick((ActionHandler)&ResearchState::onSelectProject);
+	fillProjectList();
 }
 
 /**
@@ -122,16 +108,65 @@ ResearchState::ResearchState(Game *game, Base *base) : State(game), _base(base)
  */
 ResearchState::~ResearchState()
 {
-	
 }
 
 /**
  * Returns to the previous screen.
  * @param action Pointer to an action.
  */
-void ResearchState::btnOkClick(Action *action)
+void ResearchState::btnOkClick(Action *)
 {
 	_game->popState();
+}
+
+/**
+ * Returns to the previous screen.
+ * @param action Pointer to an action.
+ */
+void ResearchState::btnNewClick(Action *)
+{
+	_game->pushState(new NewResearchListState(_base));
+}
+
+/**
+ * Displays the list of possible ResearchProjects.
+ * @param action Pointer to an action.
+ */
+void ResearchState::onSelectProject(Action *)
+{
+	const std::vector<ResearchProject *> & baseProjects(_base->getResearch());
+	_game->pushState(new ResearchInfoState(_base, baseProjects[_lstResearch->getSelectedRow()]));
+}
+
+/**
+ * Updates the research list
+ * after going to other screens.
+ */
+void ResearchState::init()
+{
+	State::init();
+	fillProjectList();
+}
+
+/**
+ * Fills the list with Base ResearchProjects. Also updates count of available lab space and available/allocated scientists.
+ */
+void ResearchState::fillProjectList()
+{
+	const std::vector<ResearchProject *> & baseProjects(_base->getResearch());
+	_lstResearch->clearList();
+	for (std::vector<ResearchProject *>::const_iterator iter = baseProjects.begin(); iter != baseProjects.end(); ++iter)
+	{
+		std::wostringstream sstr;
+		sstr << (*iter)->getAssigned();
+		const RuleResearch *r = (*iter)->getRules();
+
+		std::wstring wstr = tr(r->getName());
+		_lstResearch->addRow(3, wstr.c_str(), sstr.str().c_str(), tr((*iter)->getResearchProgress()).c_str());
+	}
+	_txtAvailable->setText(tr("STR_SCIENTISTS_AVAILABLE").arg(_base->getAvailableScientists()));
+	_txtAllocated->setText(tr("STR_SCIENTISTS_ALLOCATED").arg(_base->getAllocatedScientists()));
+	_txtSpace->setText(tr("STR_LABORATORY_SPACE_AVAILABLE").arg(_base->getFreeLaboratories()));
 }
 
 }

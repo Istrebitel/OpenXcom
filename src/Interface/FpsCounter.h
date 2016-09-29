@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_FPSCOUNTER_H
-#define OPENXCOM_FPSCOUNTER_H
-
 #include "../Engine/Surface.h"
 
 namespace OpenXcom
@@ -56,8 +53,7 @@ public:
 	void update();
 	/// Draws the FPS counter.
 	void draw();
+	void addFrame();
 };
 
 }
-
-#endif

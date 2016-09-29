@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TEXTBUTTON_H
-#define OPENXCOM_TEXTBUTTON_H
-
 #include "../Engine/InteractiveSurface.h"
 
 namespace OpenXcom
@@ -26,7 +24,9 @@ namespace OpenXcom
 
 class Text;
 class Font;
+class Language;
 class Sound;
+class ComboBox;
 
 /**
  * Coloured button with a text label.
@@ -41,6 +41,12 @@ private:
 	Uint8 _color;
 	Text *_text;
 	TextButton **_group;
+	bool _contrast, _geoscapeButton;
+	ComboBox *_comboBox;
+	// for use by RuleInterface
+	void setSecondaryColor(Uint8 color) { setTextColor(color); }
+protected:
+	bool isButtonHandled(Uint8 button = 0);
 public:
 	static Sound *soundPress;
 	/// Creates a new text button with the specified size and position.
@@ -51,8 +57,18 @@ public:
 	void setColor(Uint8 color);
 	/// Gets the text button's color.
 	Uint8 getColor() const;
-	/// Sets the text button's various fonts.
-	void setFonts(Font *big, Font *small);
+	/// Sets the text button's text color.
+	void setTextColor(Uint8 color);
+	/// Sets the text size to big.
+	void setBig();
+	/// Sets the text size to small.
+	void setSmall();
+	/// Gets the text button's current font.
+	Font *getFont() const;
+	/// Initializes the text edit's resources.
+	void initText(Font *big, Font *small, Language *lang);
+	/// Sets the text button's high contrast color setting.
+	void setHighContrast(bool contrast);
 	/// Sets the text button's text.
 	void setText(const std::wstring &text);
 	/// Gets the text button's text.
@@ -67,8 +83,11 @@ public:
 	void mousePress(Action *action, State *state);
 	/// Special handling for mouse releases.
 	void mouseRelease(Action *action, State *state);
+	/// Attaches this button to a combobox.
+	void setComboBox(ComboBox *comboBox);
+	void setWidth(int width);
+	void setHeight(int height);
+	void setGeoscapeButton(bool geo);
 };
 
 }
-
-#endif

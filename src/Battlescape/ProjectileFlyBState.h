@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,43 +17,52 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_PROJECTILEFLYBSTATE_H
-#define OPENXCOM_PROJECTILEFLYBSTATE_H
-
 #include "BattleState.h"
 #include "Position.h"
-#include "BattlescapeState.h"
 
 namespace OpenXcom
 {
 
-class BattlescapeState;
+class BattlescapeGame;
 class BattleUnit;
 class BattleItem;
+class Tile;
 
+/**
+ * A projectile state.
+ */
 class ProjectileFlyBState : public BattleState
 {
 private:
 	BattleUnit *_unit;
-	bool validThrowRange();
 	BattleItem *_ammo;
-	BattleAction _action;
+	BattleItem *_projectileItem;
+	Position _origin, _targetVoxel, _originVoxel;
+	int _projectileImpact;
+	/// Tries to create a projectile sprite.
+	bool createNewProjectile();
+	bool _initialized, _targetFloor;
 public:
 	/// Creates a new ProjectileFly class
-	ProjectileFlyBState(BattlescapeState *parent, BattleAction action);
+	ProjectileFlyBState(BattlescapeGame *parent, BattleAction action);
+	ProjectileFlyBState(BattlescapeGame *parent, BattleAction action, Position origin);
 	/// Cleans up the ProjectileFly.
 	~ProjectileFlyBState();
 	/// Initializes the state.
 	void init();
-	/// Handles a cancels request.
+	/// Handles a cancel request.
 	void cancel();
 	/// Runs state functionality every cycle.
 	void think();
-	/// Get the result of the state.
-	std::string getResult() const;
+	/// Validates the throwing range.
+	static bool validThrowRange(BattleAction *action, Position origin, Tile *target);
+	/// Calculates the maximum throwing range.
+	static int getMaxThrowDistance(int weight, int strength, int level);
+	/// Set the origin voxel, used for the blaster launcher.
+	void setOriginVoxel(Position pos);
+	/// Set the boolean flag to angle a blaster bomb towards the floor.
+	void targetFloor();
 
 };
 
 }
-
-#endif

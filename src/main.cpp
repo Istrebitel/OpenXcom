@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,17 +16,18 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <cstring>
-#include <exception>
+#include <sstream>
+#include "version.h"
+#include "Engine/Logger.h"
 #include "Engine/CrossPlatform.h"
 #include "Engine/Game.h"
-#include "Engine/Screen.h"
+#include "Engine/Options.h"
 #include "Menu/StartState.h"
 
 /** @mainpage
- * @author SupSuper
+ * @author OpenXcom Developers
  *
- * OpenXcom is an open-source reimplementation of the original X-Com
+ * OpenXcom is an open-source clone of the original X-Com
  * written entirely in C++ and SDL. This documentation contains info
  * on every class contained in the source code and its public methods.
  * The code itself also contains in-line comments for more complicated
@@ -38,41 +39,94 @@
 
 using namespace OpenXcom;
 
+// Crash handling routines
+#ifdef _MSC_VER
+#include <windows.h>
+LONG WINAPI crashLogger(PEXCEPTION_POINTERS exception)
+{
+	CrossPlatform::crashDump(exception, "");
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+#else
+#include <signal.h>
+void signalLogger(int sig)
+{
+	CrossPlatform::crashDump(&sig, "");
+	exit(EXIT_FAILURE);
+}
+
+#include <exception>
+void exceptionLogger()
+{
+	static bool logged = false;
+	std::string error;
+	try
+	{
+		if (!logged)
+		{
+			logged = true;
+			throw;
+		}
+	}
+	catch (const std::exception &e)
+	{
+		error = e.what();
+	}
+	catch (...)
+	{
+		error = "Unknown exception";
+	}
+	CrossPlatform::crashDump(0, error);
+	abort();
+}
+#endif
+
 Game *game = 0;
 
 // If you can't tell what the main() is for you should have your
 // programming license revoked...
-int main(int argc, char** args)
+int main(int argc, char *argv[])
 {
-#ifndef _DEBUG
-	try
-	{
-#endif
-		game = new Game("OpenXcom", 320, 200, 16);
-		
-		// Handles command line arguments
-		int width = 640;
-		int height = 400;
-		for (int i = 1; i < argc; i++)
-		{
-			if (strcmp(args[i], "-fullscreen") == 0)
-				game->getScreen()->setFullscreen(true);
-			if (strcmp(args[i], "-width") == 0 && argc > i + 1)
-				width = atoi(args[i+1]);
-			if (strcmp(args[i], "-height") == 0 && argc > i + 1)
-				height = atoi(args[i+1]);
-		}
-		game->getScreen()->setResolution(width, height);
-		game->setState(new StartState(game));
-		game->run();
-#ifndef _DEBUG
-	}
-	catch (std::exception &e)
-	{
-		CrossPlatform::showError(e.what());
-		exit(EXIT_FAILURE);
-	}
+#ifdef _MSC_VER
+	// Uncomment to check memory leaks in VS
+	//_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
+
+	SetUnhandledExceptionFilter(crashLogger);
+	// Uncomment to debug crash handler
+	// AddVectoredContinueHandler(1, crashLogger);
+#else
+	signal(SIGSEGV, signalLogger);
+	std::set_terminate(exceptionLogger);
 #endif
 
+	CrossPlatform::getErrorDialog();
+
+#ifdef _DEBUG
+	Logger::reportingLevel() = LOG_DEBUG;
+#else
+	Logger::reportingLevel() = LOG_INFO;
+#endif
+	if (!Options::init(argc, argv))
+		return EXIT_SUCCESS;
+	std::ostringstream title;
+	title << "OpenXcom " << OPENXCOM_VERSION_SHORT << OPENXCOM_VERSION_GIT;
+	if (Options::verboseLogging)
+		Logger::reportingLevel() = LOG_VERBOSE;
+	Options::baseXResolution = Options::displayWidth;
+	Options::baseYResolution = Options::displayHeight;
+
+	game = new Game(title.str());
+	State::setGamePtr(game);
+	game->setState(new StartState);
+	game->run();
+
+	Options::save();
+	// Comment this for faster exit.
+	delete game;
 	return EXIT_SUCCESS;
 }
+
+
+#ifdef __MORPHOS__
+const char Version[] = "$VER: OpenXCom " OPENXCOM_VERSION_SHORT " (" __AMIGADATE__  ")";
+#endif

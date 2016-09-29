@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,11 +18,11 @@
  */
 #include "TestState.h"
 #include <iostream>
-#include "SDL.h"
+#include <fstream>
+#include <SDL.h>
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
 #include "../Engine/Palette.h"
 #include "../Engine/Screen.h"
 #include "../Engine/SurfaceSet.h"
@@ -32,93 +32,94 @@
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextList.h"
+#include "../Interface/NumberText.h"
+#include "../Interface/Slider.h"
+#include "../Interface/ComboBox.h"
 
 namespace OpenXcom
 {
-
-void FontToBmp(const std::string &font, int w, int h)
-{
-	std::string dat = "./" + font + ".DAT";
-	std::string bmp = "./" + font + ".BMP";
-	Surface *s = new Surface(w, h*173);
-	s->loadScr(dat);
-
-	SDL_Color clr[8];
-	clr[0].r = 0;
-	clr[0].g = 0;
-	clr[0].b = 0;
-	for (int i = 1; i < 8; i++)
-	{
-		clr[i].r = 256-i*32;
-		clr[i].g = 256-i*32;
-		clr[i].b = 256-i*32;
-	}
-	s->setPalette(clr, 0, 8);
-
-	SDL_SaveBMP(s->getSurface(), bmp.c_str());
-}
-
-void BmpToFont(const std::string &font)
-{
-	std::string dat = "./" + font + ".DAT";
-	std::string bmp = "./" + font + ".BMP";
-	SDL_Surface *s = SDL_LoadBMP(bmp.c_str());
-}
 
 /**
  * Initializes all the elements in the test screen.
  * @param game Pointer to the core game.
  */
-TestState::TestState(Game *game) : State(game)
+TestState::TestState()
 {
 	// Create objects
 	_window = new Window(this, 300, 180, 10, 10);
 	_text = new Text(280, 120, 20, 50);
 	_button = new TextButton(100, 20, 110, 150);
 	_list = new TextList(300, 180, 10, 10);
-	_set = _game->getResourcePack()->getSurfaceSet("BASEBITS.PCK");
+	_number = new NumberText(50, 5, 200, 25);
+	_set = _game->getMod()->getSurfaceSet("BASEBITS.PCK");
 	_set->getFrame(1);
-	
+	_slider = new Slider(100, 15, 50, 50);
+	_comboBox = new ComboBox(this, 80, 16, 98, 100);
 	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("PALETTES.DAT_1")->getColors());
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(2)), Palette::backPos, 16);
+	setPalette("PAL_BASESCAPE", 2);
 
 	add(_window);
 	add(_button);
 	add(_text);
 	add(_list);
+	add(_number);
+	add(_slider);
+	add(_comboBox);
+
+	centerAllSurfaces();
 
 	// Set up objects
-	_window->setColor(Palette::blockOffset(15)+4);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK04.SCR"));
-	
-	_button->setColor(Palette::blockOffset(15)+4);
+	_window->setColor(Palette::blockOffset(15)+1);
+	_window->setBackground(_game->getMod()->getSurface("BACK04.SCR"));
+
+	_button->setColor(Palette::blockOffset(15)+1);
 	_button->setText(L"LOLOLOL");
-	
+
 	_text->setColor(Palette::blockOffset(15)+1);
 	//_text->setBig();
 	_text->setWordWrap(true);
 	_text->setAlign(ALIGN_CENTER);
 	_text->setVerticalAlign(ALIGN_MIDDLE);
-	//_text->setText(_game->getLanguage()->getString("STR_COUNCIL_TERMINATED"));
+	//_text->setText(tr("STR_COUNCIL_TERMINATED"));
 
 	_list->setColor(Palette::blockOffset(15)+1);
 	_list->setColumns(3, 100, 50, 100);
 	_list->addRow(2, L"a", L"b");
 	_list->addRow(3, L"lol", L"welp", L"yo");
 	_list->addRow(1, L"0123456789");
-	
+
+	_number->setColor(Palette::blockOffset(15) + 1);
+	_number->setValue(1234567890);
+
+	_slider->setColor(Palette::blockOffset(15)+1);
+
+	std::vector<std::string> difficulty;
+	for (int i = 0; i != 3; ++i)
+	{
+		difficulty.push_back("STR_1_BEGINNER");
+		difficulty.push_back("STR_2_EXPERIENCED");
+		difficulty.push_back("STR_3_VETERAN");
+		difficulty.push_back("STR_4_GENIUS");
+		difficulty.push_back("STR_5_SUPERHUMAN");
+	}
+
+	_comboBox->setColor(Palette::blockOffset(15)+1);
+	_comboBox->setOptions(difficulty);
+
 	_i = 0;
 
-	FontToBmp("BIGLETS_R", 16, 16);
-	FontToBmp("SMALLSET_R", 8, 9);
-	FontToBmp("BIGLETS_P", 16, 16);
-	FontToBmp("SMALLSET_P", 8, 9);
+	//_game->getMod()->getPalette("PAL_GEOSCAPE")->savePal("../../../Geoscape.pal");
+	//_game->getMod()->getPalette("PAL_BASESCAPE")->savePal("../../../Basescape.pal");
+	//_game->getMod()->getPalette("PAL_UFOPAEDIA")->savePal("../../../Ufopaedia.pal");
+	//_game->getMod()->getPalette("PAL_BATTLESCAPE")->savePal("../../../Battlescape.pal");
+
+	//_game->getMod()->getFont("FONT_BIG")->fix("../../../Big.bmp", 256);
+	//_game->getMod()->getFont("FONT_SMALL")->fix("../../../Small.bmp", 128);
 }
 
 TestState::~TestState()
 {
-	
+
 }
 
 void TestState::think()
@@ -126,7 +127,7 @@ void TestState::think()
 	State::think();
 
 	/*
-	_text->setText(_game->getLanguage()->getString(_i));
+	_text->setText(tr(_i));
 	_i++;
 	*/
 }
@@ -150,7 +151,7 @@ SDL_Surface *TestState::testSurface()
 
 	// Create surface
 	surface = SDL_CreateRGBSurface(SDL_HWSURFACE, 256, 25, 8, 0, 0, 0, 0);
-	
+
 	if (surface == 0)
 	{
 		throw Exception(SDL_GetError());
@@ -160,9 +161,9 @@ SDL_Surface *TestState::testSurface()
 	SDL_LockSurface(surface);
 
 	Uint8 *index = (Uint8 *)surface->pixels;
-	
-	for (int j = 0; j < 25; j++)
-		for (int i = 0; i < 256; i++, index++)
+
+	for (int j = 0; j < 25; ++j)
+		for (int i = 0; i < 256; i++, ++index)
 			*index = i;
 
 	// Unlock the surface

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_MINIBASEVIEW_H
-#define OPENXCOM_MINIBASEVIEW_H
-
 #include <vector>
 #include "../Engine/InteractiveSurface.h"
 
@@ -36,13 +34,14 @@ class SurfaceSet;
 class MiniBaseView : public InteractiveSurface
 {
 private:
-	static const int MAX_BASES = 8;
 	static const int MINI_SIZE = 14;
 
 	std::vector<Base*> *_bases;
 	SurfaceSet *_texture;
-	unsigned int _base, _hoverBase;
+	size_t _base, _hoverBase;
+	Uint8 _red, _green;
 public:
+	static const size_t MAX_BASES = 8;
 	/// Creates a new mini base view at the specified position and size.
 	MiniBaseView(int width, int height, int x = 0, int y = 0);
 	/// Cleans up the mini base view.
@@ -52,15 +51,15 @@ public:
 	/// Sets the texture for the mini base view.
 	void setTexture(SurfaceSet *texture);
 	/// Gets the base the mouse is over.
-	unsigned int getHoveredBase() const;
+	size_t getHoveredBase() const;
 	/// Sets the selected base for the mini base view.
-	void setSelectedBase(unsigned int base);
+	void setSelectedBase(size_t base);
 	/// Draws the mini base view.
 	void draw();
 	/// Special handling for mouse hovers.
 	void mouseOver(Action *action, State *state);
+	void setColor(Uint8 color);
+	void setSecondaryColor(Uint8 color);
 };
 
 }
-
-#endif

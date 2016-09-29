@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_SOLDIERARMORSTATE_H
-#define OPENXCOM_SOLDIERARMORSTATE_H
-
 #include <vector>
 #include "../Engine/State.h"
 
@@ -30,25 +28,26 @@ class TextButton;
 class Window;
 class Text;
 class TextList;
-class RuleCraftWeapon;
+class Armor;
 
 /**
- * Select Armor window that allows to
- * change the armor equipped on a soldier.
+ * Select Armor window that allows changing
+ * of the armor equipped on a soldier.
  */
 class SoldierArmorState : public State
 {
 private:
 	Base *_base;
-	unsigned int _soldier;
+	size_t _soldier;
 
 	TextButton *_btnCancel;
 	Window *_window;
-	Text *_txtTitle, *_txtSoldier, *_txtType, *_txtQuantity;
+	Text *_txtTitle, *_txtType, *_txtQuantity;
 	TextList *_lstArmor;
+	std::vector<Armor*> _armors;
 public:
 	/// Creates the Soldier Armor state.
-	SoldierArmorState(Game *game, Base *base, unsigned int soldier);
+	SoldierArmorState(Base *base, size_t soldier);
 	/// Cleans up the Soldier Armor state.
 	~SoldierArmorState();
 	/// Handler for clicking the Cancel button.
@@ -58,5 +57,3 @@ public:
 };
 
 }
-
-#endif

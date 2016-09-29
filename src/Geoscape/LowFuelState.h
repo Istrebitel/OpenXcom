@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_LOWFUELSTATE_H
-#define OPENXCOM_LOWFUELSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -45,11 +43,9 @@ private:
 	Text *_txtTitle, *_txtMessage;
 public:
 	/// Creates the Low Fuel state.
-	LowFuelState(Game *game, Craft *craft, GeoscapeState *state);
+	LowFuelState(Craft *craft, GeoscapeState *state);
 	/// Cleans up the Low Fuel state.
 	~LowFuelState();
-	/// Updates the palette.
-	void init();
 	/// Handler for clicking the Ok button.
 	void btnOkClick(Action *action);
 	/// Handler for clicking the Ok - 5 Secs button.
@@ -57,5 +53,3 @@ public:
 };
 
 }
-
-#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,35 +17,26 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "MultipleTargetsState.h"
-#include <sstream>
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Window.h"
-#include "../Interface/TextList.h"
 #include "../Savegame/Target.h"
 #include "../Savegame/Base.h"
 #include "../Savegame/Craft.h"
 #include "../Savegame/Ufo.h"
-#include "../Savegame/Waypoint.h"
 #include "GeoscapeState.h"
 #include "ConfirmDestinationState.h"
 #include "InterceptState.h"
 #include "UfoDetectedState.h"
 #include "GeoscapeCraftState.h"
 #include "TargetInfoState.h"
-#include "MultipleTargetsState.h"
+#include "../Engine/Options.h"
+#include "../Engine/Action.h"
 
 namespace OpenXcom
 {
-
-#define OUTER_MARGIN 3
-#define INNER_MARGIN 4
-#define BORDER 5
-#define BUTTON_HEIGHT 16
 
 /**
  * Initializes all the elements in the Multiple Targets window.
@@ -54,48 +45,42 @@ namespace OpenXcom
  * @param craft Pointer to craft to retarget (NULL if none).
  * @param state Pointer to the Geoscape state.
  */
-MultipleTargetsState::MultipleTargetsState(Game *game, std::vector<Target*> targets, Craft *craft, GeoscapeState *state) : State(game), _targets(targets), _craft(craft), _state(state)
+MultipleTargetsState::MultipleTargetsState(std::vector<Target*> targets, Craft *craft, GeoscapeState *state) : _targets(targets), _craft(craft), _state(state)
 {
 	_screen = false;
 
 	if (_targets.size() > 1)
 	{
-		int listHeight = _targets.size() * 8;
-		int winHeight = listHeight + BUTTON_HEIGHT + OUTER_MARGIN * 2 + INNER_MARGIN + BORDER * 2;
+		int winHeight = BUTTON_HEIGHT * _targets.size() + SPACING * (_targets.size() - 1) + MARGIN * 2;
 		int winY = (200 - winHeight) / 2;
-		int listY = winY + BORDER + OUTER_MARGIN;
-		int btnY = listY + listHeight + INNER_MARGIN;
+		int btnY = winY + MARGIN;
 
 		// Create objects
-		_window = new Window(this, 136, winHeight, 60, winY);
-		_btnCancel = new TextButton(116, BUTTON_HEIGHT, 70, btnY);
-		_lstTargets = new TextList(116, listHeight, 70, listY);
+		_window = new Window(this, 136, winHeight, 60, winY, POPUP_VERTICAL);
 
 		// Set palette
-		_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(7)), Palette::backPos, 16);
+		setInterface("UFOInfo");
 
-		add(_window);
-		add(_btnCancel);
-		add(_lstTargets);
+		add(_window, "window", "UFOInfo");
 
 		// Set up objects
-		_window->setColor(Palette::blockOffset(8)+8);
-		_window->setBackground(_game->getResourcePack()->getSurface("BACK15.SCR"));
+		_window->setBackground(_game->getMod()->getSurface("BACK15.SCR"));
 
-		_btnCancel->setColor(Palette::blockOffset(8)+8);
-		_btnCancel->setText(_game->getLanguage()->getString("STR_CANCEL_UC"));
-		_btnCancel->onMouseClick((ActionHandler)&MultipleTargetsState::btnCancelClick);
-
-		_lstTargets->setColor(Palette::blockOffset(8)+5);
-		_lstTargets->setAlign(ALIGN_CENTER);
-		_lstTargets->setColumns(1, 116);
-		_lstTargets->setSelectable(true);
-		_lstTargets->setBackground(_window);
-		_lstTargets->onMouseClick((ActionHandler)&MultipleTargetsState::lstTargetsClick);
-		for (std::vector<Target*>::iterator i = _targets.begin(); i != _targets.end(); ++i)
+		int y = btnY;
+		for (size_t i = 0; i < _targets.size(); ++i)
 		{
-			_lstTargets->addRow(1, (*i)->getName(_game->getLanguage()).c_str());
+			TextButton *button = new TextButton(116, BUTTON_HEIGHT, 70, y);
+			button->setText(_targets[i]->getName(_game->getLanguage()));
+			button->onMouseClick((ActionHandler)&MultipleTargetsState::btnTargetClick);
+			add(button, "button", "UFOInfo");
+
+			_btnTargets.push_back(button);
+
+			y += button->getHeight() + SPACING;
 		}
+		_btnTargets[0]->onKeyboardPress((ActionHandler)&MultipleTargetsState::btnCancelClick, Options::keyCancel);
+
+		centerAllSurfaces();
 	}
 }
 
@@ -113,11 +98,13 @@ MultipleTargetsState::~MultipleTargetsState()
  */
 void MultipleTargetsState::init()
 {
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(7)), Palette::backPos, 16);
-
 	if (_targets.size() == 1)
 	{
 		popupTarget(*_targets.begin());
+	}
+	else
+	{
+		State::init();
 	}
 }
 
@@ -133,27 +120,26 @@ void MultipleTargetsState::popupTarget(Target *target)
 		Base* b = dynamic_cast<Base*>(target);
 		Craft* c = dynamic_cast<Craft*>(target);
 		Ufo* u = dynamic_cast<Ufo*>(target);
-		Waypoint* w = dynamic_cast<Waypoint*>(target);
 		if (b != 0)
 		{
-			_game->pushState(new InterceptState(_game, _state->getGlobe(), b));
+			_game->pushState(new InterceptState(_state->getGlobe(), b));
 		}
 		else if (c != 0)
 		{
-			_game->pushState(new GeoscapeCraftState(_game, c, _state->getGlobe(), 0));
+			_game->pushState(new GeoscapeCraftState(c, _state->getGlobe(), 0));
 		}
 		else if (u != 0)
 		{
-			_game->pushState(new UfoDetectedState(_game, u, _state, false));
+			_game->pushState(new UfoDetectedState(u, _state, false, u->getHyperDetected()));
 		}
-		else if (w != 0)
+		else
 		{
-			_game->pushState(new TargetInfoState(_game, w));
+			_game->pushState(new TargetInfoState(target, _state->getGlobe()));
 		}
 	}
 	else
 	{
-		_game->pushState(new ConfirmDestinationState(_game, _craft, target));
+		_game->pushState(new ConfirmDestinationState(_craft, target));
 	}
 }
 
@@ -161,7 +147,7 @@ void MultipleTargetsState::popupTarget(Target *target)
  * Returns to the previous screen.
  * @param action Pointer to an action.
  */
-void MultipleTargetsState::btnCancelClick(Action *action)
+void MultipleTargetsState::btnCancelClick(Action *)
 {
 	_game->popState();
 }
@@ -170,10 +156,16 @@ void MultipleTargetsState::btnCancelClick(Action *action)
  * Pick a target to display.
  * @param action Pointer to an action.
  */
-void MultipleTargetsState::lstTargetsClick(Action *action)
+void MultipleTargetsState::btnTargetClick(Action *action)
 {
-	Target* t = _targets[_lstTargets->getSelectedRow()];
-	popupTarget(t);
+	for (size_t i = 0; i < _btnTargets.size(); ++i)
+	{
+		if (action->getSender() == _btnTargets[i])
+		{
+			popupTarget(_targets[i]);
+			break;
+		}
+	}
 }
 
 }

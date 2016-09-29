@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,47 +17,39 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_EXPLOSION_H
-#define OPENXCOM_EXPLOSION_H
-
-#include <vector>
 #include "Position.h"
 
 namespace OpenXcom
 {
 
-class ResourcePack;
-class BattleItem;
-class SavedBattleGame;
-
 /**
- * A class that represents an explosion animation. Map is the owner of an instance of this class during it's short life.
+ * A class that represents an explosion animation. Map is the owner of an instance of this class during its short life.
  * It represents both a bullet hit, as a real explosion animation.
  */
 class Explosion
 {
 private:
-	ResourcePack *_res;
-	SavedBattleGame *_save;
-	BattleItem *_item;
 	Position _position;
-	int _currentFrame, _startFrame;
-	bool _big;
+	int _currentFrame, _startFrame, _frameDelay;
+	bool _big, _hit;
 public:
+	static const int HIT_FRAMES;
+	static const int EXPLODE_FRAMES;
+	static const int BULLET_FRAMES;
 	/// Creates a new Explosion.
-	Explosion(Position _position, int startFrame, bool big);
+	Explosion(Position _position, int startFrame, int frameDelay = 0, bool big = false, bool hit = false);
 	/// Cleans up the Explosion.
 	~Explosion();
-	/// Move the Explosion one frame.
+	/// Moves the Explosion on one frame.
 	bool animate();
-	/// Get the current position in voxel space.
+	/// Gets the current position in voxel space.
 	Position getPosition() const;
-	/// Get a the current frame.
-	int getCurrentFrame();
-	/// Is big?
-	bool isBig();
+	/// Gets the current frame.
+	int getCurrentFrame() const;
+	/// Checks if this is a real explosion.
+	bool isBig() const;
+	/// Checks if this is a melee or psi hit.
+	bool isHit() const;
 };
 
 }
-
-#endif

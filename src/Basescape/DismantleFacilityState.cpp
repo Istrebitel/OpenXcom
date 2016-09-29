@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,16 +18,16 @@
  */
 #include "DismantleFacilityState.h"
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
+#include "../Engine/Options.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Savegame/Base.h"
 #include "../Savegame/BaseFacility.h"
-#include "../Ruleset/RuleBaseFacility.h"
+#include "BaseView.h"
+#include "../Mod/RuleBaseFacility.h"
 #include "../Savegame/SavedGame.h"
 
 namespace OpenXcom
@@ -37,9 +37,10 @@ namespace OpenXcom
  * Initializes all the elements in a Dismantle Facility window.
  * @param game Pointer to the core game.
  * @param base Pointer to the base to get info from.
+ * @param view Pointer to the baseview to update.
  * @param fac Pointer to the facility to dismantle.
  */
-DismantleFacilityState::DismantleFacilityState(Game *game, Base *base, BaseFacility *fac) : State(game), _base(base), _fac(fac)
+DismantleFacilityState::DismantleFacilityState(Base *base, BaseView *view, BaseFacility *fac) : _base(base), _view(view), _fac(fac)
 {
 	_screen = false;
 
@@ -51,33 +52,32 @@ DismantleFacilityState::DismantleFacilityState(Game *game, Base *base, BaseFacil
 	_txtFacility = new Text(142, 9, 25, 85);
 
 	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(6)), Palette::backPos, 16);
+	setInterface("dismantleFacility");
 
-	add(_window);
-	add(_btnOk);
-	add(_btnCancel);
-	add(_txtTitle);
-	add(_txtFacility);
+	add(_window, "window", "dismantleFacility");
+	add(_btnOk, "button", "dismantleFacility");
+	add(_btnCancel, "button", "dismantleFacility");
+	add(_txtTitle, "text", "dismantleFacility");
+	add(_txtFacility, "text", "dismantleFacility");
+
+	centerAllSurfaces();
 
 	// Set up objects
-	_window->setColor(Palette::blockOffset(15)+4);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK13.SCR"));
+	_window->setBackground(_game->getMod()->getSurface("BACK13.SCR"));
 
-	_btnOk->setColor(Palette::blockOffset(15)+9);
-	_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&DismantleFacilityState::btnOkClick);
+	_btnOk->onKeyboardPress((ActionHandler)&DismantleFacilityState::btnOkClick, Options::keyOk);
 
-	_btnCancel->setColor(Palette::blockOffset(15)+9);
-	_btnCancel->setText(_game->getLanguage()->getString("STR_CANCEL_UC"));
+	_btnCancel->setText(tr("STR_CANCEL_UC"));
 	_btnCancel->onMouseClick((ActionHandler)&DismantleFacilityState::btnCancelClick);
+	_btnCancel->onKeyboardPress((ActionHandler)&DismantleFacilityState::btnCancelClick, Options::keyCancel);
 
-	_txtTitle->setColor(Palette::blockOffset(13)+10);
 	_txtTitle->setAlign(ALIGN_CENTER);
-	_txtTitle->setText(_game->getLanguage()->getString("STR_DISMANTLE"));
+	_txtTitle->setText(tr("STR_DISMANTLE"));
 
-	_txtFacility->setColor(Palette::blockOffset(13)+10);
 	_txtFacility->setAlign(ALIGN_CENTER);
-	_txtFacility->setText(_game->getLanguage()->getString(_fac->getRules()->getType()));
+	_txtFacility->setText(tr(_fac->getRules()->getType()));
 }
 
 /**
@@ -93,16 +93,24 @@ DismantleFacilityState::~DismantleFacilityState()
  * to the previous screen.
  * @param action Pointer to an action.
  */
-void DismantleFacilityState::btnOkClick(Action *action)
+void DismantleFacilityState::btnOkClick(Action *)
 {
-	if (!_fac->getRules()->getLift())
+	if (!_fac->getRules()->isLift())
 	{
+		// Give refund if this is an unstarted, queued build.
+		if (_fac->getBuildTime() > _fac->getRules()->getBuildTime())
+		{
+			_game->getSavedGame()->setFunds(_game->getSavedGame()->getFunds() + _fac->getRules()->getBuildCost());
+		}
+
 		for (std::vector<BaseFacility*>::iterator i = _base->getFacilities()->begin(); i != _base->getFacilities()->end(); ++i)
 		{
 			if (*i == _fac)
 			{
 				_base->getFacilities()->erase(i);
+				_view->resetSelectedFacility();
 				delete _fac;
+				if (Options::allowBuildingQueue) _view->reCalcQueuedBuildings();
 				break;
 			}
 		}
@@ -127,7 +135,7 @@ void DismantleFacilityState::btnOkClick(Action *action)
  * Returns to the previous screen.
  * @param action Pointer to an action.
  */
-void DismantleFacilityState::btnCancelClick(Action *action)
+void DismantleFacilityState::btnCancelClick(Action *)
 {
 	_game->popState();
 }

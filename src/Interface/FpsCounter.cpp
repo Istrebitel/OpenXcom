@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -19,9 +19,9 @@
 
 #include "FpsCounter.h"
 #include <cmath>
-#include "../Engine/Palette.h"
 #include "../Engine/Action.h"
 #include "../Engine/Timer.h"
+#include "../Engine/Options.h"
 #include "NumberText.h"
 
 namespace OpenXcom
@@ -36,14 +36,13 @@ namespace OpenXcom
  */
 FpsCounter::FpsCounter(int width, int height, int x, int y) : Surface(width, height, x, y), _frames(0)
 {
-	_visible = false;
+	_visible = Options::fpsCounter;
 
 	_timer = new Timer(1000);
 	_timer->onTimer((SurfaceHandler)&FpsCounter::update);
 	_timer->start();
 
 	_text = new NumberText(width, height, x, y);
-	setColor(Palette::blockOffset(15)+12);
 }
 
 /**
@@ -82,9 +81,10 @@ void FpsCounter::setColor(Uint8 color)
  */
 void FpsCounter::handle(Action *action)
 {
-	if (action->getDetails()->type == SDL_KEYDOWN && action->getDetails()->key.keysym.sym == SDLK_F5)
+	if (action->getDetails()->type == SDL_KEYDOWN && action->getDetails()->key.keysym.sym == Options::keyFps)
 	{
 		_visible = !_visible;
+		Options::fpsCounter = _visible;
 	}
 }
 
@@ -93,7 +93,6 @@ void FpsCounter::handle(Action *action)
  */
 void FpsCounter::think()
 {
-	_frames++;
 	_timer->think(0, this);
 }
 
@@ -105,7 +104,7 @@ void FpsCounter::update()
 	int fps = (int)floor((double)_frames / _timer->getTime() * 1000);
 	_text->setValue(fps);
 	_frames = 0;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -113,8 +112,13 @@ void FpsCounter::update()
  */
 void FpsCounter::draw()
 {
-	clear();
+	Surface::draw();
 	_text->blit(this);
+}
+
+void FpsCounter::addFrame()
+{
+	_frames++;
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -19,23 +19,19 @@
 
 #include "Ufopaedia.h"
 #include "UfopaediaSelectState.h"
-#include "../Ruleset/ArticleDefinition.h"
-#include "ArticleState.h"
-#include "../Savegame/UfopaediaSaved.h"
+#include "../Mod/ArticleDefinition.h"
 #include "../Engine/Game.h"
-#include "../Engine/Palette.h"
-#include "../Engine/Surface.h"
-#include "../Engine/Language.h"
+#include "../Engine/Options.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/TextList.h"
-#include "../Resource/ResourcePack.h"
-#include "../Savegame/SavedGame.h"
+#include "../Mod/Mod.h"
 
 namespace OpenXcom
 {
-	UfopaediaSelectState::UfopaediaSelectState(Game *game, std::string section) : State(game), _section(section)
+	UfopaediaSelectState::UfopaediaSelectState(const std::string &section) : _section(section)
 	{
 		_screen = false;
 
@@ -43,34 +39,32 @@ namespace OpenXcom
 		_window = new Window(this, 256, 180, 32, 10, POPUP_NONE);
 
 		// set title
-		_txtTitle = new Text(224, 16, 48, 26);
+		_txtTitle = new Text(224, 17, 48, 26);
 
 		// set buttons
 		_btnOk = new TextButton(224, 16, 48, 166);
 		_lstSelection = new TextList(224, 104, 40, 50);
 
 		// Set palette
-		_game->setPalette(_game->getResourcePack()->getPalette("PALETTES.DAT_0")->getColors());
+		setInterface("ufopaedia");
 
-		add(_window);
-		add(_txtTitle);
-		add(_btnOk);
-		add(_lstSelection);
+		add(_window, "window", "ufopaedia");
+		add(_txtTitle, "text", "ufopaedia");
+		add(_btnOk, "button2", "ufopaedia");
+		add(_lstSelection, "list", "ufopaedia");
 
-		_window->setColor(Palette::blockOffset(15)+2);
-		_window->setBackground(_game->getResourcePack()->getSurface("BACK01.SCR"));
+		centerAllSurfaces();
 
-		_txtTitle->setColor(Palette::blockOffset(8)+10);
+		_window->setBackground(_game->getMod()->getSurface("BACK01.SCR"));
+
 		_txtTitle->setBig();
 		_txtTitle->setAlign(ALIGN_CENTER);
-		_txtTitle->setText(_game->getLanguage()->getString("STR_SELECT_ITEM"));
+		_txtTitle->setText(tr("STR_SELECT_ITEM"));
 
-		_btnOk->setColor(Palette::blockOffset(15)+2);
-		_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+		_btnOk->setText(tr("STR_OK"));
 		_btnOk->onMouseClick((ActionHandler)&UfopaediaSelectState::btnOkClick);
+		_btnOk->onKeyboardPress((ActionHandler)&UfopaediaSelectState::btnOkClick,Options::keyCancel);
 
-		_lstSelection->setColor(Palette::blockOffset(8)+5);
-		_lstSelection->setArrowColor(Palette::blockOffset(15)+2);
 		_lstSelection->setColumns(1, 206);
 		_lstSelection->setSelectable(true);
 		_lstSelection->setBackground(_window);
@@ -83,12 +77,20 @@ namespace OpenXcom
 
 	UfopaediaSelectState::~UfopaediaSelectState()
 	{}
+	
+	/**
+	 * Initializes the state.
+	 */
+	void UfopaediaSelectState::init()
+	{
+		State::init();
+	}
 
 	/**
 	 * Returns to the previous screen.
 	 * @param action Pointer to an action.
 	 */
-	void UfopaediaSelectState::btnOkClick(Action *action)
+	void UfopaediaSelectState::btnOkClick(Action *)
 	{
 		_game->popState();
 	}
@@ -97,7 +99,7 @@ namespace OpenXcom
 	 *
 	 * @param action Pointer to an action.
 	 */
-	void UfopaediaSelectState::lstSelectionClick(Action *action)
+	void UfopaediaSelectState::lstSelectionClick(Action *)
 	{
 		Ufopaedia::openArticle(_game, _article_list[_lstSelection->getSelectedRow()]);
 	}
@@ -107,19 +109,11 @@ namespace OpenXcom
 		ArticleDefinitionList::iterator it;
 
 		_article_list.clear();
-		_game->getSavedGame()->getUfopaedia()->getSectionList(_section, _article_list);
-		for(it = _article_list.begin(); it!=_article_list.end(); ++it)
+		Ufopaedia::list(_game->getSavedGame(), _game->getMod(), _section, _article_list);
+		for (it = _article_list.begin(); it!=_article_list.end(); ++it)
 		{
-			_lstSelection->addRow(1, Ufopaedia::buildText(_game, (*it)->title).c_str());
+			_lstSelection->addRow(1, tr((*it)->title).c_str());
 		}
-	}
-
-	void UfopaediaSelectState::init()
-	{
-		// Set palette
-		_game->setPalette(_game->getResourcePack()->getPalette("PALETTES.DAT_0")->getColors());
-
-		State::init();
 	}
 
 }

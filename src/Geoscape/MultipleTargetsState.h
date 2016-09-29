@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,17 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_MULTIPLETARGETSSTATE_H
-#define OPENXCOM_MULTIPLETARGETSSTATE_H
-
 #include "../Engine/State.h"
+#include <vector>
 
 namespace OpenXcom
 {
 
 class TextButton;
 class Window;
-class TextList;
 class Craft;
 class Target;
 class GeoscapeState;
@@ -37,16 +35,19 @@ class GeoscapeState;
 class MultipleTargetsState : public State
 {
 private:
+	static const int MARGIN = 10;
+	static const int SPACING = 4;
+	static const int BUTTON_HEIGHT = 16;
+
 	std::vector<Target*> _targets;
 	Craft *_craft;
 	GeoscapeState *_state;
-	
+
 	Window *_window;
-	TextButton *_btnCancel;
-	TextList *_lstTargets;
+	std::vector<TextButton*> _btnTargets;
 public:
 	/// Creates the Multiple Targets state.
-	MultipleTargetsState(Game *game, std::vector<Target*> targets, Craft *craft, GeoscapeState *state);
+	MultipleTargetsState(std::vector<Target*> targets, Craft *craft, GeoscapeState *state);
 	/// Cleans up the Multiple Targets state.
 	~MultipleTargetsState();
 	/// Updates the window.
@@ -56,9 +57,7 @@ public:
 	/// Handler for clicking the Cancel button.
 	void btnCancelClick(Action *action);
 	/// Handler for clicking the Targets list.
-	void lstTargetsClick(Action *action);
+	void btnTargetClick(Action *action);
 };
 
 }
-
-#endif

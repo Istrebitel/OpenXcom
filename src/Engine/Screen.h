@@ -1,5 +1,6 @@
-	/*
- * Copyright 2010 OpenXcom Developers.
+	#pragma once
+/*
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_SCREEN_H
-#define OPENXCOM_SCREEN_H
-
-#include "SDL.h"
+#include <SDL.h>
+#include <string>
+#include "OpenGL.h"
 
 namespace OpenXcom
 {
@@ -38,18 +38,34 @@ class Action;
 class Screen
 {
 private:
-	Surface *_surface;
 	SDL_Surface *_screen;
+	int _bpp;
+	int _baseWidth, _baseHeight;
 	double _scaleX, _scaleY;
+	int _topBlackBand, _bottomBlackBand, _leftBlackBand, _rightBlackBand, _cursorTopBlackBand, _cursorLeftBlackBand;
 	Uint32 _flags;
-	bool _fullscreen;
+	SDL_Color deferredPalette[256];
+	int _numColors, _firstColor;
+	bool _pushPalette;
+	OpenGL glOutput;
+	Surface *_surface;
+	SDL_Rect _clear;
+	/// Sets the _flags and _bpp variables based on game options; needed in more than one place now
+	void makeVideoFlags();
 public:
-	/// Creates a new display screen with the specified resolution.
-	Screen(int width, int height, int bpp);
+	static const int ORIGINAL_WIDTH;
+	static const int ORIGINAL_HEIGHT;
+
+	/// Creates a new display screen.
+	Screen();
 	/// Cleans up the display screen.
 	~Screen();
+	/// Get horizontal offset.
+	int getDX() const;
+	/// Get vertical offset.
+	int getDY() const;
 	/// Gets the internal buffer.
-	Surface *const getSurface() const;
+	Surface *getSurface();
 	/// Handles keyboard events.
 	void handle(Action *action);
 	/// Renders the screen onto the game window.
@@ -57,23 +73,31 @@ public:
 	/// Clears the screen.
 	void clear();
 	/// Sets the screen's 8bpp palette.
-	void setPalette(SDL_Color *colors, int firstcolor = 0, int ncolors = 256);
+	void setPalette(SDL_Color *colors, int firstcolor = 0, int ncolors = 256, bool immediately = false);
 	/// Gets the screen's 8bpp palette.
-	SDL_Color *const getPalette() const;
+	SDL_Color *getPalette() const;
 	/// Gets the screen's width.
 	int getWidth() const;
 	/// Gets the screen's height.
 	int getHeight() const;
-	/// Sets the screen's display resolution.
-	void setResolution(int width, int height);
-	/// Sets whether the screen is full-screen or windowed.
-	void setFullscreen(bool full);
-	/// Gets the screen's X scale;
+	/// Resets the screen display.
+	void resetDisplay(bool resetVideo = true);
+	/// Gets the screen's X scale.
 	double getXScale() const;
-	/// Gets the screen's Y scale;
+	/// Gets the screen's Y scale.
 	double getYScale() const;
+	/// Gets the screen's top black forbidden to cursor band's height.
+	int getCursorTopBlackBand() const;
+	/// Gets the screen's left black forbidden to cursor band's width.
+	int getCursorLeftBlackBand() const;
+	/// Takes a screenshot.
+	void screenshot(const std::string &filename) const;
+	/// Checks whether a 32bit scaler is requested and works for the selected resolution
+	static bool is32bitEnabled();
+	/// Checks whether OpenGL output is requested
+	static bool isOpenGLEnabled();
+	/// update the game scale as required.
+	static void updateScale(int &type, int selection, int &x, int &y, bool change);
 };
 
 }
-
-#endif

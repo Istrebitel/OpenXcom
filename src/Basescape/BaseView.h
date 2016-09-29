@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_BASEVIEW_H
-#define OPENXCOM_BASEVIEW_H
-
 #include "../Engine/InteractiveSurface.h"
 
 namespace OpenXcom
@@ -29,6 +27,7 @@ class SurfaceSet;
 class BaseFacility;
 class RuleBaseFacility;
 class Font;
+class Language;
 class Timer;
 
 /**
@@ -46,23 +45,29 @@ private:
 	SurfaceSet *_texture;
 	BaseFacility *_facilities[BASE_SIZE][BASE_SIZE], *_selFacility;
 	Font *_big, *_small;
+	Language *_lang;
 	int _gridX, _gridY, _selSize;
 	Surface *_selector;
 	bool _blink;
 	Timer *_timer;
+	Uint8 _cellColor, _selectorColor;
+	/// Updates the neighborFacility's build time. This is for internal use only (reCalcQueuedBuildings()).
+	void updateNeighborFacilityBuildTime(BaseFacility* facility, BaseFacility* neighbor);
 public:
 	/// Creates a new base view at the specified position and size.
 	BaseView(int width, int height, int x = 0, int y = 0);
 	/// Cleans up the base view.
 	~BaseView();
-	/// Sets the base view's various fonts.
-	void setFonts(Font *big, Font *small);
+	/// Initializes the base view's various resources.
+	void initText(Font *big, Font *small, Language *lang);
 	/// Sets the base to display.
 	void setBase(Base *base);
 	/// Sets the texture for this base view.
 	void setTexture(SurfaceSet *texture);
 	/// Gets the currently selected facility.
 	BaseFacility *getSelectedFacility() const;
+	/// Prevents any mouseover bugs on dismantling base facilities before setBase has had time to update the base.
+	void resetSelectedFacility();
 	/// Gets the X position of the currently selected square.
 	int getGridX() const;
 	/// Gets the Y position of the currently selected square.
@@ -71,8 +76,10 @@ public:
 	void setSelectable(int size);
 	/// Checks if a facility can be placed.
 	bool isPlaceable(RuleBaseFacility *rule) const;
-	/// Counts the squares connected to a grid position.
-	int countConnected(int x, int y, int **grid, BaseFacility *remove = 0) const;
+	/// Checks if the placed facility is placed in queue or not.
+	bool isQueuedBuilding(RuleBaseFacility *rule) const;
+	/// ReCalculates the remaining build-time of all queued buildings.
+	void reCalcQueuedBuildings();
 	/// Handles the timers.
 	void think();
 	/// Blinks the selector.
@@ -85,8 +92,10 @@ public:
 	void mouseOver(Action *action, State *state);
 	/// Special handling for mouse hovering out.
 	void mouseOut(Action *action, State *state);
+
+	void setColor(Uint8 color);
+
+	void setSecondaryColor(Uint8 color);
 };
 
 }
-
-#endif

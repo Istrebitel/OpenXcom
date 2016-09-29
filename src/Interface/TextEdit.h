@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,17 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TEXTEDIT_H
-#define OPENXCOM_TEXTEDIT_H
-
 #include "../Engine/InteractiveSurface.h"
 #include "Text.h"
 
 namespace OpenXcom
 {
 
-class Font;
 class Timer;
+enum TextEditConstraint { TEC_NONE, TEC_NUMERIC_POSITIVE, TEC_NUMERIC };
 
 /**
  * Editable version of Text.
@@ -38,26 +36,32 @@ class TextEdit : public InteractiveSurface
 private:
 	Text *_text, *_caret;
 	std::wstring _value;
-	bool _blink;
+	bool _blink, _modal;
 	Timer *_timer;
 	wchar_t _ascii;
-	unsigned int _caretPos;
-
+	size_t _caretPos;
+	TextEditConstraint _textEditConstraint;
+	ActionHandler _change;
+	State *_state;
 	/// Checks if a character will exceed the maximum width.
 	bool exceedsMaxWidth(wchar_t c);
+	/// Checks if character is valid to be inserted at caret position.
+	bool isValidChar(Uint16 key);
 public:
-	/// Creates a new text edit with the specified size, position and fonts.
-	TextEdit(int width, int height, int x = 0, int y = 0);
+	/// Creates a new text edit with the specified size and position.
+	TextEdit(State *state, int width, int height, int x = 0, int y = 0);
 	/// Cleans up the text edit.
 	~TextEdit();
+	/// Handle focus.
+	void handle(Action *action, State *state);
 	/// Sets focus on this text edit.
-	virtual void focus();
+	void setFocus(bool focus, bool modal = true);
 	/// Sets the text size to big.
 	void setBig();
 	/// Sets the text size to small.
 	void setSmall();
-	/// Sets the text edit's various fonts.
-	void setFonts(Font *big, Font *small);
+	/// Initializes the text edit's resources.
+	void initText(Font *big, Font *small, Language *lang);
 	/// Sets the text's string.
 	void setText(const std::wstring &text);
 	/// Gets the text edit's string.
@@ -72,6 +76,8 @@ public:
 	void setAlign(TextHAlign align);
 	/// Sets the text edit's vertical alignment.
 	void setVerticalAlign(TextVAlign valign);
+	/// Sets the text edit constraint.
+	void setConstraint(TextEditConstraint constraint);
 	/// Sets the text edit's color.
 	void setColor(Uint8 color);
 	/// Gets the text edit's color.
@@ -92,8 +98,8 @@ public:
 	void mousePress(Action *action, State *state);
 	/// Special handling for keyboard presses.
 	void keyboardPress(Action *action, State *state);
+	/// Hooks an action handler to when the slider changes.
+	void onChange(ActionHandler handler);
 };
 
 }
-
-#endif

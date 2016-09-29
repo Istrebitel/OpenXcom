@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,12 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_ARTICLESTATE_H
-#define OPENXCOM_ARTICLESTATE_H
-
 #include "../Engine/State.h"
-#include "Ufopaedia.h"
+#include "../Mod/RuleItem.h"
 #include <string>
 
 namespace OpenXcom
@@ -30,36 +27,39 @@ namespace OpenXcom
 	class Action;
 	class Surface;
 	class TextButton;
-	
+
 	/**
 	 * UfopaediaArticle is the base class for all articles of various types.
-	 * 
+	 *
 	 * It encapsulates the basic characteristics.
 	 */
-	
+
 	class ArticleState : public State
 	{
 	protected:
-		/// constructor (protected, so it can only be instantiated by derived classes) 
-		ArticleState(Game *game, std::string article_id);
+		/// constructor (protected, so it can only be instantiated by derived classes)
+		ArticleState(const std::string &article_id);
 		/// destructor
 		virtual ~ArticleState();
-	
+
 	public:
 		/// return the article id
-		std::string getId() { return _id; }
+		std::string getId() const { return _id; }
 
 	protected:
-		
+
+		/// converts damage type to string
+		std::string getDamageTypeText(ItemDamageType dt) const;
+
 		/// screen layout helpers
 		void initLayout();
-		
+
 		/// callback for OK button
 		void btnOkClick(Action *action);
-		
+
 		/// callback for PREV button
 		void btnPrevClick(Action *action);
-		
+
 		/// callback for NEXT button
 		void btnNextClick(Action *action);
 		/// the article id
@@ -72,5 +72,3 @@ namespace OpenXcom
 		TextButton *_btnNext;
 	};
 }
-
-#endif

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,22 +17,30 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TRANSFER_H
-#define OPENXCOM_TRANSFER_H
-
 #include <string>
-#include "yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
 
-enum TransferType { TRANSFER_SOLDIER, TRANSFER_CRAFT, TRANSFER_ITEM, TRANSFER_SCIENTIST, TRANSFER_ENGINEER };
+enum TransferType { TRANSFER_ITEM, TRANSFER_CRAFT, TRANSFER_SOLDIER, TRANSFER_SCIENTIST, TRANSFER_ENGINEER };
+
+struct TransferRow
+{
+	TransferType type;
+	void *rule;
+	std::wstring name;
+	int cost;
+	int qtySrc, qtyDst;
+	int amount;
+};
 
 class Soldier;
 class Craft;
 class Language;
 class Base;
-class Ruleset;
+class Mod;
+class SavedGame;
 
 /**
  * Represents an item transfer.
@@ -53,17 +62,19 @@ public:
 	/// Cleans up the transfer.
 	~Transfer();
 	/// Loads the transfer from YAML.
-	void load(const YAML::Node& node, Base *base, const Ruleset *rule);
+	bool load(const YAML::Node& node, Base *base, const Mod *mod, SavedGame *save);
 	/// Saves the transfer to YAML.
-	void save(YAML::Emitter& out) const;
+	YAML::Node save() const;
 	/// Sets the soldier of the transfer.
 	void setSoldier(Soldier *soldier);
 	/// Sets the craft of the transfer.
 	void setCraft(Craft *craft);
+	/// Gets the craft of the transfer.
+	Craft *getCraft();
 	/// Gets the items of the transfer.
 	std::string getItems() const;
 	/// Sets the items of the transfer.
-	void setItems(std::string id, int qty = 1);
+	void setItems(const std::string &id, int qty = 1);
 	/// Sets the scientists of the transfer.
 	void setScientists(int scientists);
 	/// Sets the engineers of the transfer.
@@ -78,8 +89,9 @@ public:
 	TransferType getType() const;
 	/// Advances the transfer.
 	void advance(Base *base);
+	/// Get a pointer to the soldier being transferred.
+	Soldier *getSoldier();
+
 };
 
 }
-
-#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,17 +17,19 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Window.h"
-#include "SDL.h"
+#include <SDL.h>
+#include <SDL_mixer.h>
+#include "../fmath.h"
 #include "../Engine/Timer.h"
 #include "../Engine/Sound.h"
 #include "../Engine/RNG.h"
 
-#define POPUP_SPEED 0.075
-
 namespace OpenXcom
 {
 
-Sound *Window::soundPopup[3] = {0, 0, 0};
+const double Window::POPUP_SPEED = 0.05;
+
+Sound *Window::soundPopup[3];
 
 /**
  * Sets up a blank window with the specified size and position.
@@ -38,7 +40,7 @@ Sound *Window::soundPopup[3] = {0, 0, 0};
  * @param y Y position in pixels.
  * @param popup Popup animation.
  */
-Window::Window(State *state, int width, int height, int x, int y, WindowPopup popup) : Surface(width, height, x, y), _bg(0), _color(0), _popup(popup), _popupStep(0.0), _state(state)
+Window::Window(State *state, int width, int height, int x, int y, WindowPopup popup) : Surface(width, height, x, y), _dx(-x), _dy(-y), _bg(0), _color(0), _popup(popup), _popupStep(0.0), _state(state), _contrast(false), _screen(false), _thinBorder(false)
 {
 	_timer = new Timer(10);
 	_timer->onTimer((SurfaceHandler)&Window::popup);
@@ -49,7 +51,14 @@ Window::Window(State *state, int width, int height, int x, int y, WindowPopup po
 	}
 	else
 	{
+		setHidden(true);
 		_timer->start();
+		if (_state != 0)
+		{
+			_screen = state->isScreen();
+			if (_screen)
+				_state->toggleScreen();
+		}
 	}
 }
 
@@ -67,15 +76,8 @@ Window::~Window()
  */
 void Window::setBackground(Surface *bg)
 {
-	if (_popupStep < 1.0)
-	{
-		for (std::vector<Surface*>::iterator i = _state->getSurfaces()->begin(); i < _state->getSurfaces()->end(); ++i)
-			if ((*i) != this)
-				(*i)->hide();
-	}
-
 	_bg = bg;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -84,15 +86,8 @@ void Window::setBackground(Surface *bg)
  */
 void Window::setColor(Uint8 color)
 {
-	if (_popupStep < 1.0)
-	{
-		for (std::vector<Surface*>::iterator i = _state->getSurfaces()->begin(); i < _state->getSurfaces()->end(); ++i)
-			if ((*i) != this)
-				(*i)->hide();
-	}
-
 	_color = color;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -105,10 +100,27 @@ Uint8 Window::getColor() const
 }
 
 /**
+ * Enables/disables high contrast color. Mostly used for
+ * Battlescape UI.
+ * @param contrast High contrast setting.
+ */
+void Window::setHighContrast(bool contrast)
+{
+	_contrast = contrast;
+	_redraw = true;
+}
+
+/**
  * Keeps the animation timers running.
  */
 void Window::think()
 {
+	if (_hidden && _popupStep < 1.0)
+	{
+		_state->hideAll();
+		setHidden(false);
+	}
+
 	_timer->think(0, this);
 }
 
@@ -117,11 +129,13 @@ void Window::think()
  */
 void Window::popup()
 {
-	if (_popupStep == 0.0)
+	if (AreSame(_popupStep, 0.0))
 	{
-		int sound = RNG::generate(0, 2);
+		int sound = RNG::seedless(0,2);
 		if (soundPopup[sound] != 0)
-			soundPopup[sound]->play();
+		{
+			soundPopup[sound]->play(Mix_GroupAvailable(0));
+		}
 	}
 	if (_popupStep < 1.0)
 	{
@@ -129,13 +143,15 @@ void Window::popup()
 	}
 	else
 	{
-		for (std::vector<Surface*>::iterator i = _state->getSurfaces()->begin(); i < _state->getSurfaces()->end(); ++i)
-			if ((*i) != this)
-				(*i)->show();
+		if (_screen)
+		{
+			_state->toggleScreen();
+		}
+		_state->showAll();
 		_popupStep = 1.0;
 		_timer->stop();
 	}
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -146,10 +162,8 @@ void Window::popup()
  */
 void Window::draw()
 {
+	Surface::draw();
 	SDL_Rect square;
-	Uint8 color = _color;
-
-	clear();
 
 	if (_popup == POPUP_HORIZONTAL || _popup == POPUP_BOTH)
 	{
@@ -172,36 +186,106 @@ void Window::draw()
 		square.h = getHeight();
 	}
 
-	for (int i = 0; i < 5; i++)
+	int mul = 1;
+	if (_contrast)
 	{
-		drawRect(&square, color);
-		if (i < 2)
-			color--;
-		else
-			color++;
-		square.x++;
-		square.y++;
-		if (square.w >= 2)
-			square.w -= 2;
-		else
-			square.w = 1;
+		mul = 2;
+	}
+	Uint8 color = _color + 3 * mul;
 
-		if (square.h >= 2)
-			square.h -= 2;
-		else
-			square.h = 1;
+	if (_thinBorder)
+	{
+		color = _color + 1 * mul;
+		for (int i = 0; i < 5; ++i)
+		{
+			drawRect(&square, color);
+
+			if (i % 2 == 0)
+			{
+				square.x++;
+				square.y++;
+			}
+			square.w--;
+			square.h--;
+
+			switch (i)
+			{
+			case 0:
+				color = _color + 5 * mul;
+				setPixel(square.w, 0, color);
+				break;
+			case 1:
+				color = _color + 2 * mul;
+				break;
+			case 2:
+				color = _color + 4 * mul;
+				setPixel(square.w+1, 1, color);
+				break;
+			case 3:
+				color = _color + 3 * mul;
+				break;
+			}
+		}
+	}
+	else
+	{
+		for (int i = 0; i < 5; ++i)
+		{
+			drawRect(&square, color);
+			if (i < 2)
+				color -= 1 * mul;
+			else
+				color += 1 * mul;
+			square.x++;
+			square.y++;
+			if (square.w >= 2)
+				square.w -= 2;
+			else
+				square.w = 1;
+
+			if (square.h >= 2)
+				square.h -= 2;
+			else
+				square.h = 1;
+		}
 	}
 
 	if (_bg != 0)
 	{
-		_bg->getCrop()->x = getX() + square.x;
-		_bg->getCrop()->y = getY() + square.y;
-		_bg->getCrop()->w = square.w;
-		_bg->getCrop()->h = square.h;
+		_bg->getCrop()->x = square.x - _dx;
+		_bg->getCrop()->y = square.y - _dy;
+		_bg->getCrop()->w = square.w ;
+		_bg->getCrop()->h = square.h ;
 		_bg->setX(square.x);
 		_bg->setY(square.y);
 		_bg->blit(this);
 	}
+}
+
+/**
+ * Changes the horizontal offset of the surface in the X axis.
+ * @param dx X position in pixels.
+ */
+void Window::setDX(int dx)
+{
+	_dx = dx;
+}
+
+/**
+ * Changes the vertical offset of the surface in the Y axis.
+ * @param dy Y position in pixels.
+ */
+void Window::setDY(int dy)
+{
+	_dy = dy;
+}
+
+/**
+ * Changes the window to have a thin border.
+ */
+void Window::setThinBorder()
+{
+	_thinBorder = true;
 }
 
 }

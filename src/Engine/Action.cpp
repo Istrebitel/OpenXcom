@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -26,9 +26,11 @@ namespace OpenXcom
  * Creates a new action.
  * @param scaleX Screen's X scaling factor.
  * @param scaleY Screen's Y scaling factor.
+ * @param topBlackBand Screen's top black band height.
+ * @param leftBlackBand Screen's left black band width.
  * @param ev Pointer to SDL_event.
  */
-Action::Action(SDL_Event *ev, double scaleX, double scaleY) : _ev(ev), _scaleX(scaleX), _scaleY(scaleY), _mouseX(-1), _mouseY(-1), _sender(0)
+Action::Action(SDL_Event *ev, double scaleX, double scaleY, int topBlackBand, int leftBlackBand) : _ev(ev), _scaleX(scaleX), _scaleY(scaleY), _topBlackBand(topBlackBand), _leftBlackBand(leftBlackBand), _mouseX(-1), _mouseY(-1), _surfaceX(-1), _surfaceY(-1), _sender(0)
 {
 }
 
@@ -57,7 +59,48 @@ double Action::getYScale() const
 }
 
 /**
- * Returns the absolute X position of the
+ * Sets this action as a mouse action with
+ * the respective mouse properties.
+ * @param mouseX Mouse's X position.
+ * @param mouseY Mouse's Y position.
+ * @param surfaceX Surface's X position.
+ * @param surfaceY Surface's Y position.
+ */
+void Action::setMouseAction(int mouseX, int mouseY, int surfaceX, int surfaceY)
+{
+	_mouseX = mouseX - _leftBlackBand;
+	_mouseY = mouseY - _topBlackBand;
+	_surfaceX = surfaceX;
+	_surfaceY = surfaceY;
+}
+
+bool Action::isMouseAction() const
+{
+	return (_mouseX != -1);
+}
+
+/**
+ * Returns the height in pixel of the
+ * top black band if any.
+ * @return Screen's top black band.
+ */
+int Action::getTopBlackBand() const
+{
+	return _topBlackBand;
+}
+
+/**
+ * Returns the width in pixel of the
+ * left black band if any.
+ * @return Screen's left black band.
+ */
+int Action::getLeftBlackBand() const
+{
+	return _leftBlackBand;
+}
+
+/**
+ * Returns the X position of the
  * mouse cursor relative to the game window,
  * or -1 if this isn't a mouse-related action.
  * @return Mouse's X position.
@@ -68,17 +111,7 @@ int Action::getXMouse() const
 }
 
 /**
- * Changes the absolute X position of the
- * mouse cursor relative to the game window.
- * @param x Mouse's X position.
- */
-void Action::setXMouse(int x)
-{
-	_mouseX = x;
-}
-
-/**
- * Returns the absolute Y position of the
+ * Returns the Y position of the
  * mouse cursor relative to the game window,
  * or -1 if this isn't a mouse-related action.
  * @return Mouse's Y position.
@@ -89,13 +122,55 @@ int Action::getYMouse() const
 }
 
 /**
- * Changes the absolute Y position of the
- * mouse cursor relative to the game window.
- * @param y Mouse's Y position.
+ * Returns the absolute X position of the
+ * mouse cursor relative to the game window,
+ * corrected for screen scaling.
+ * @return Mouse's absolute X position.
  */
-void Action::setYMouse(int y)
+double Action::getAbsoluteXMouse() const
 {
-	_mouseY = y;
+	if (_mouseX == -1)
+		return -1;
+	return _mouseX / _scaleX;
+}
+
+/**
+ * Returns the absolute Y position of the
+ * mouse cursor relative to the game window,
+ * corrected for screen scaling.
+ * @return Mouse's absolute X position.
+ */
+double Action::getAbsoluteYMouse() const
+{
+	if (_mouseY == -1)
+		return -1;
+	return _mouseY / _scaleY;
+}
+
+/**
+ * Returns the relative X position of the
+ * mouse cursor relative to the surface that
+ * triggered the action, corrected for screen scaling.
+ * @return Mouse's relative X position.
+ */
+double Action::getRelativeXMouse() const
+{
+	if (_mouseX == -1)
+		return -1;
+	return _mouseX - _surfaceX * _scaleX;
+}
+
+/**
+ * Returns the relative X position of the
+ * mouse cursor relative to the surface that
+ * triggered the action, corrected for screen scaling.
+ * @return Mouse's relative X position.
+ */
+double Action::getRelativeYMouse() const
+{
+	if (_mouseY == -1)
+		return -1;
+	return _mouseY - _surfaceY * _scaleY;
 }
 
 /**
@@ -103,7 +178,7 @@ void Action::setYMouse(int y)
  * this action (the sender).
  * @return Pointer to interactive surface.
  */
-InteractiveSurface *const Action::getSender() const
+InteractiveSurface *Action::getSender() const
 {
 	return _sender;
 }
@@ -122,7 +197,7 @@ void Action::setSender(InteractiveSurface *sender)
  * Returns the details about this action.
  * @return Pointer to SDL_event.
  */
-SDL_Event *const Action::getDetails() const
+SDL_Event *Action::getDetails() const
 {
 	return _ev;
 }

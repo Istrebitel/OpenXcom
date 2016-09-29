@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,12 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TARGET_H
-#define OPENXCOM_TARGET_H
-
 #include <string>
 #include <vector>
-#include "yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -36,18 +34,20 @@ class Target
 {
 protected:
 	double _lon, _lat;
+	std::wstring _name;
+	int _depth;
 	std::vector<Target*> _followers;
-public:
 	/// Creates a target.
 	Target();
+public:
 	/// Cleans up the target.
 	virtual ~Target();
-	/// Loads the target from YAML.
+	/// Loads the moving target from YAML.
 	virtual void load(const YAML::Node& node);
 	/// Saves the target to YAML.
-	virtual void save(YAML::Emitter& out) const;
+	virtual YAML::Node save() const;
 	/// Saves the target's ID to YAML.
-	virtual void saveId(YAML::Emitter& out) const;
+	virtual YAML::Node saveId() const;
 	/// Gets the target's longitude.
 	double getLongitude() const;
 	/// Sets the target's longitude.
@@ -57,11 +57,21 @@ public:
 	/// Sets the target's latitude.
 	void setLatitude(double lat);
 	/// Gets the target's name.
-	virtual std::wstring getName(Language *lang) const = 0;
+	virtual std::wstring getName(Language *lang) const;
+	/// Sets the target's name.
+	void setName(const std::wstring &newName);
+	/// Gets the target's default name.
+	virtual std::wstring getDefaultName(Language *lang) const = 0;
+	/// Gets the target's marker.
+	virtual int getMarker() const = 0;
 	/// Gets the target's followers.
 	std::vector<Target*> *getFollowers();
+	/// Gets the distance to another target.
+	double getDistance(const Target *target) const;
+	/// Gets the depth of the target.
+	int getSiteDepth() const;
+	/// Sets the depth of the target.
+	void setSiteDepth(int depth);
 };
 
 }
-
-#endif

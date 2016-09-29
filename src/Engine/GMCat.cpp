@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -19,6 +19,7 @@
 
 #include "GMCat.h"
 #include <vector>
+#include "Music.h"
 
 namespace OpenXcom
 {
@@ -26,7 +27,7 @@ namespace OpenXcom
 static inline unsigned read_uint32_le (const unsigned char *p)
 {
 return ((unsigned) p[0]) + (((unsigned) p[1]) << 8)
-    + (((unsigned) p[2]) << 16) + (((unsigned) p[3]) << 24);
+	+ (((unsigned) p[2]) << 16) + (((unsigned) p[3]) << 24);
 }
 
 /// MIDI sequence.
@@ -191,10 +192,10 @@ static int gmext_write_sequence (std::vector<unsigned char> &midi,
 			cmd = *data++;
 			left--;
 			switch (cmd) {
-				case 0xFF:      // end track
-				case 0xFD:      // end subsequence
+				case 0xFF:	  // end track
+				case 0xFD:	  // end subsequence
 					return 0;
-				case 0xFE:      // insert subsequence
+				case 0xFE:	  // insert subsequence
 					if (!left--)
 						return -1;
 					if (*data >= stream->nsubs)
@@ -211,7 +212,7 @@ static int gmext_write_sequence (std::vector<unsigned char> &midi,
 					cmd &= 0xF0;
 			}
 		} else if (cmd == 0)
-			return -1;      // invalid running mode
+			return -1;	  // invalid running mode
 
 		if (!left--)
 			return -1;
@@ -235,7 +236,7 @@ static int gmext_write_sequence (std::vector<unsigned char> &midi,
 
 			case 0xC0:
 				if (data1 == 0x7E)
-					return 0;       // restart stream
+					return 0;	   // restart stream
 				status->patch = data1;
 				if ((data1 == 0x57) || (data1 == 0x3F))
 					data1 = 0x3E;
@@ -275,7 +276,7 @@ static int gmext_write_sequence (std::vector<unsigned char> &midi,
 				midi.push_back(data2);
 				} break;
 
-			default:        // unhandled cmd byte
+			default:		// unhandled cmd byte
 				return -1;
 		}
 
@@ -291,7 +292,7 @@ static int gmext_write_midi (const struct gmstream *stream,
 	// write MIDI file header
 	static const unsigned char midi_file_signature[8] =
 		{ 'M','T','h','d',0,0,0,6 };
-	for (int i=0; i<8; i++)
+	for (int i=0; i<8; ++i)
 		midi.push_back(midi_file_signature[i]);
 	gmext_write_int16(midi, 1);
 	gmext_write_int16(midi, stream->ntracks + 1);
@@ -300,7 +301,7 @@ static int gmext_write_midi (const struct gmstream *stream,
 	// write global tempo track
 	static const unsigned char midi_track_header[8] =
 		{ 'M','T','r','k',0,0,0,11 };
-	for (int i=0; i<8; i++)
+	for (int i=0; i<8; ++i)
 		midi.push_back(midi_track_header[i]);
 	gmext_write_delta(midi, 0);
 	gmext_write_tempo_ev(midi, stream->tempo);
@@ -308,14 +309,14 @@ static int gmext_write_midi (const struct gmstream *stream,
 	gmext_write_end_ev(midi);
 
 	// write tracks
-	for (int j=0; j<stream->ntracks; j++) {
+	for (int j=0; j<stream->ntracks; ++j) {
 
 		// header
-		for (int i=0; i<4; i++)
+		for (int i=0; i<4; ++i)
 			midi.push_back(midi_track_header[i]);
 
-		unsigned int loffset = midi.size();
-		for (int i=0; i<4; i++)
+		size_t loffset = midi.size();
+		for (int i=0; i<4; ++i)
 			midi.push_back(0);
 
 		// initial data
@@ -323,7 +324,7 @@ static int gmext_write_midi (const struct gmstream *stream,
 			{ /* 0, 0xB0, */ 0x78, 0, 0, 0x79, 0, 0, 0x7B, 0 };
 		midi.push_back(0);
 		midi.push_back(0xB0 | stream->tracks[j].channel);
-		for (int i=0; i<8; i++)
+		for (int i=0; i<8; ++i)
 			midi.push_back(midi_track_init[i]);
 
 		// body
@@ -339,7 +340,7 @@ static int gmext_write_midi (const struct gmstream *stream,
 
 		// rewrite track length
 		unsigned char *p = &midi[loffset];
-		unsigned int length = midi.size() - loffset - 4;
+		size_t length = midi.size() - loffset - 4;
 		p[0] = length >> 24;
 		p[1] = length >> 16;
 		p[2] = length >> 8;

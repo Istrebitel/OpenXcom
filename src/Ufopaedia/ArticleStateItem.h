@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,11 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_ARTICLESTATEITEM_H
-#define OPENXCOM_ARTICLESTATEITEM_H
-
-#include <string>
 #include "ArticleState.h"
 
 namespace OpenXcom
@@ -30,22 +26,19 @@ namespace OpenXcom
 	class Text;
 	class TextList;
 	class ArticleDefinitionItem;
-	class RuleItem;
-	
+
 	/**
 	 * ArticleStateItem has a caption, text, preview image and a stats block.
 	 * The facility image is found using the RuleBasefacility class.
 	 */
-	
+
 	class ArticleStateItem : public ArticleState
 	{
 	public:
-		ArticleStateItem(Game *game, ArticleDefinitionItem *article_defs);
+		ArticleStateItem(ArticleDefinitionItem *article_defs);
 		virtual ~ArticleStateItem();
-		
+
 	protected:
-		void setDamageTypeText(Text *text_field, RuleItem *ammo_rule);
-		
 		Surface *_image;
 		Text *_txtTitle;
 		Text *_txtInfo;
@@ -60,5 +53,3 @@ namespace OpenXcom
 		Surface *_imageAmmo[3];
 	};
 }
-
-#endif

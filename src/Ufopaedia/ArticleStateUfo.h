@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,11 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_ARTICLESTATEUFO_H
-#define OPENXCOM_ARTICLESTATEUFO_H
-
-#include <string>
 #include "ArticleState.h"
 
 namespace OpenXcom
@@ -30,18 +26,18 @@ namespace OpenXcom
 	class Text;
 	class TextList;
 	class ArticleDefinitionUfo;
-	
+
 	/**
 	 * ArticleStateUfo has a caption, text, preview image and a stats block.
 	 * The UFO image is found using the RuleUfo class.
 	 */
-	
+
 	class ArticleStateUfo : public ArticleState
 	{
 	public:
-		ArticleStateUfo(Game *game, ArticleDefinitionUfo *article_defs);
+		ArticleStateUfo(ArticleDefinitionUfo *article_defs);
 		virtual ~ArticleStateUfo();
-		
+
 	protected:
 		Surface *_image;
 		Text *_txtTitle;
@@ -49,5 +45,3 @@ namespace OpenXcom
 		TextList *_lstInfo;
 	};
 }
-
-#endif

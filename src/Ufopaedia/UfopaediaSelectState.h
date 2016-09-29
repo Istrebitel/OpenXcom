@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_UFOPAEDIASELECTSTATE_H
-#define OPENXCOM_UFOPAEDIASELECTSTATE_H
-
 #include "../Engine/State.h"
 #include "Ufopaedia.h"
 #include <string>
@@ -32,17 +29,17 @@ namespace OpenXcom
 	class Text;
 	class TextButton;
 	class TextList;
-	
+
 	/**
 	 * UfopaediaSelectState is the screen that lists articles of a given type.
 	 */
-	
+
 	class UfopaediaSelectState : public State
 	{
 	public:
-		UfopaediaSelectState(Game *game, std::string section);
+		UfopaediaSelectState(const std::string &section);
 		virtual ~UfopaediaSelectState();
-		
+		void init();
 	protected:
 		std::string _section;
 		Window *_window;
@@ -50,16 +47,12 @@ namespace OpenXcom
 		TextButton *_btnOk;
 		TextList *_lstSelection;
 		ArticleDefinitionList _article_list;
-		
+
 		/// Handler for clicking the OK button
 		void btnOkClick(Action *action);
 		/// Handler for clicking the selection list.
 		void lstSelectionClick(Action *action);
 		/// load available articles into the selection list
 		void loadSelectionList();
-		/// Initializes the state.
-		virtual void init();
 	};
 }
-
-#endif

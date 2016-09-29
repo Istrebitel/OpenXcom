@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,41 +17,34 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_UNITDIEBSTATE_H
-#define OPENXCOM_UNITDIEBSTATE_H
-
 #include "BattleState.h"
-#include "Position.h"
-#include "../Ruleset/RuleItem.h"
 
 namespace OpenXcom
 {
 
+class BattlescapeGame;
+class TileEngine;
+class Tile;
 class BattleUnit;
-class TerrainModifier;
 
+/**
+ * State for falling units.
+ */
 class UnitFallBState : public BattleState
 {
 private:
-	BattleUnit *_unit;
-	ItemDamageType _damageType;
+	TileEngine *_terrain;
+	std::vector<Tile*> tilesToFallInto;
+	std::vector<BattleUnit*> unitsToMove;
 public:
-	/// Creates a new UnitFallBState class
-	UnitFallBState(BattlescapeState *parent, BattleUnit *unit, ItemDamageType damageType);
-	/// Cleans up the UnitFallBState.
+	/// Creates a new UnitWalkBState class
+	UnitFallBState(BattlescapeGame *parent);
+	/// Cleans up the UnitWalkBState.
 	~UnitFallBState();
 	/// Initializes the state.
 	void init();
-	/// Handles a cancels request.
-	void cancel();
-	/// Runs state functionality every cycle.
+	/// Runs state functionality every cycle. Returns when finished.
 	void think();
-	/// Get the result of the state.
-	std::string getResult() const;
-	/// Convert a unit to a corpse.
-	void convertUnitToCorpse(BattleUnit *unit, TerrainModifier *terrain);
 };
 
 }
-
-#endif

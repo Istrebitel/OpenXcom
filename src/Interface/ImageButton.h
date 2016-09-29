@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_IMAGEBUTTON_H
-#define OPENXCOM_IMAGEBUTTON_H
-
 #include "../Engine/InteractiveSurface.h"
 
 namespace OpenXcom
@@ -36,6 +34,7 @@ class ImageButton : public InteractiveSurface
 protected:
 	Uint8 _color;
 	ImageButton **_group;
+	bool _inverted;
 public:
 	/// Creates a new image button with the specified size and position.
 	ImageButton(int width, int height, int x = 0, int y = 0);
@@ -51,8 +50,8 @@ public:
 	void mousePress(Action *action, State *state);
 	/// Special handling for mouse releases.
 	void mouseRelease(Action *action, State *state);
+	/// Invert a button explicitly either ON or OFF.
+	void toggle(bool invert);
 };
 
 }
-
-#endif

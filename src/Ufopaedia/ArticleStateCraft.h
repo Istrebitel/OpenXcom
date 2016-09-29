@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,37 +17,29 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_ARTICLESTATECRAFT_H
-#define OPENXCOM_ARTICLESTATECRAFT_H
-
-#include <string>
 #include "ArticleState.h"
 
 namespace OpenXcom
 {
 	class Game;
 	class Text;
-	class TextList;
 	class ArticleDefinitionCraft;
-	
+
 	/**
 	 * ArticleStateCraft has a caption, text, background image and a stats block.
-	 * The layout of the description text and stats block can vary, 
+	 * The layout of the description text and stats block can vary,
 	 * depending on the background craft image.
 	 */
-	
+
 	class ArticleStateCraft : public ArticleState
 	{
 	public:
-		ArticleStateCraft(Game *game, ArticleDefinitionCraft *article_defs);
+		ArticleStateCraft(ArticleDefinitionCraft *article_defs);
 		virtual ~ArticleStateCraft();
-		
+
 	protected:
 		Text *_txtTitle;
 		Text *_txtInfo;
-		TextList *_lstInfo;
+		Text *_txtStats;
 	};
 }
-
-#endif

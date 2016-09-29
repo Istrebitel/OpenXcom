@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,19 +17,15 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_PATHFINDING_H
-#define OPENXCOM_PATHFINDING_H
-
 #include <vector>
 #include "Position.h"
-#include "../Ruleset/MapData.h"
+#include "PathfindingNode.h"
+#include "../Mod/MapData.h"
 
 namespace OpenXcom
 {
 
-class Position;
 class SavedBattleGame;
-class PathfindingNode;
 class Tile;
 class BattleUnit;
 
@@ -39,37 +36,79 @@ class Pathfinding
 {
 private:
 	SavedBattleGame *_save;
-	PathfindingNode **_nodes;
+	std::vector<PathfindingNode> _nodes;
 	int _size;
-	std::vector<int> _path;
+	BattleUnit *_unit;
+	bool _pathPreviewed;
+	bool _strafeMove;
+	int _totalTUCost;
+	bool _modifierUsed;
 	MovementType _movementType;
 	/// Gets the node at certain position.
 	PathfindingNode *getNode(const Position& pos);
-	/// whether a tile blocks a certain movementType
-	bool isBlocked(Tile *tile, const int part);
-	bool isBlocked(Tile *startTile, Tile *endTile, const int direction);
-	bool canFallDown(Tile *destinationTile);
-	bool isOnStairs(const Position &startPosition, const Position &endPosition);
-	BattleUnit *_unit;
+	/// Determines whether a tile blocks a certain movementType.
+	bool isBlocked(Tile *tile, const int part, BattleUnit *missileTarget, int bigWallExclusion = -1) const;
+	/// Tries to find a straight line path between two positions.
+	bool bresenhamPath(const Position& origin, const Position& target, BattleUnit *missileTarget, bool sneak = false, int maxTUCost = 1000);
+	/// Tries to find a path between two positions.
+	bool aStarPath(const Position& origin, const Position& target, BattleUnit *missileTarget, bool sneak = false, int maxTUCost = 1000);
+	/// Determines whether a unit can fall down from this tile.
+	bool canFallDown(Tile *destinationTile) const;
+	/// Determines whether a unit can fall down from this tile.
+	bool canFallDown(Tile *destinationTile, int size) const;
+	std::vector<int> _path;
 public:
-	/// Creates a new Pathfinding class
+	/// Determines whether the unit is going up a stairs.
+	bool isOnStairs(const Position &startPosition, const Position &endPosition) const;
+	/// Determines whether or not movement between starttile and endtile is possible in the direction.
+	bool isBlocked(Tile *startTile, Tile *endTile, const int direction, BattleUnit *missileTarget);
+	static const int DIR_UP = 8;
+	static const int DIR_DOWN = 9;
+	enum bigWallTypes{ BLOCK = 1, BIGWALLNESW, BIGWALLNWSE, BIGWALLWEST, BIGWALLNORTH, BIGWALLEAST, BIGWALLSOUTH, BIGWALLEASTANDSOUTH, BIGWALLWESTANDNORTH};
+	static const int O_BIGWALL = -1;
+	static int red;
+	static int green;
+	static int yellow;
+	/// Creates a new Pathfinding class.
 	Pathfinding(SavedBattleGame *save);
 	/// Cleans up the Pathfinding.
 	~Pathfinding();
-	/// Calculate the shortest path.
-	void calculate(BattleUnit *unit, Position &endPosition);
+	/// Calculates the shortest path.
+	void calculate(BattleUnit *unit, Position endPosition, BattleUnit *missileTarget = 0, int maxTUCost = 1000);
 	/// Converts direction to a vector.
-	static void directionToVector(const int direction, Position *vector);
-	/// Check whether a path is ready gives the first direction.
-	int getStartDirection();
-	/// Dequeue a direction.
+	static void directionToVector(int direction, Position *vector);
+	/// Converts a vector to a direction.
+	static void vectorToDirection(const Position &vector, int &dir);
+	/// Checks whether a path is ready and gives the first direction.
+	int getStartDirection() const;
+	/// Dequeues a direction.
 	int dequeuePath();
-	/// Get's the TU cost to move from 1 tile to the other.
-	int getTUCost(const Position &startPosition, const int direction, Position *endPosition, BattleUnit *unit);
-	/// Abort the current path.
+	/// Gets the TU cost to move from 1 tile to the other.
+	int getTUCost(const Position &startPosition, int direction, Position *endPosition, BattleUnit *unit, BattleUnit *target, bool missile);
+	/// Aborts the current path.
 	void abortPath();
+	/// Gets the strafe move setting.
+	bool getStrafeMove() const;
+	/// Checks, for the up/down button, if the movement is valid.
+	bool validateUpDown(BattleUnit *bu, Position startPosition, const int direction, bool missile = false) const;
+	/// Previews the path.
+	bool previewPath(bool bRemove = false);
+	/// Removes the path preview.
+	bool removePreview();
+	/// Sets _unit in order to abuse low-level pathfinding functions from outside the class.
+	void setUnit(BattleUnit *unit);
+	/// Gets all reachable tiles, based on cost.
+	std::vector<int> findReachable(BattleUnit *unit, int tuMax);
+	/// Gets _totalTUCost; finds out whether we can hike somewhere in this turn or not.
+	int getTotalTUCost() const { return _totalTUCost; }
+	/// Gets the path preview setting.
+	bool isPathPreviewed() const;
+	/// Gets the modifier setting.
+	bool isModifierUsed() const;
+	/// Gets a reference to the path.
+	const std::vector<int> &getPath() const;
+	/// Makes a copy to the path.
+	std::vector<int> copyPath() const;
 };
 
 }
-
-#endif

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http:///www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_CONFIRMDESTINATIONSTATE_H
-#define OPENXCOM_CONFIRMDESTINATIONSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -44,7 +42,7 @@ private:
 	TextButton *_btnOk, *_btnCancel;
 public:
 	/// Creates the Confirm Destination state.
-	ConfirmDestinationState(Game *game, Craft *craft, Target *target);
+	ConfirmDestinationState(Craft *craft, Target *target);
 	/// Cleans up the Confirm Destination state.
 	~ConfirmDestinationState();
 	/// Handler for clicking the OK button.
@@ -54,5 +52,3 @@ public:
 };
 
 }
-
-#endif

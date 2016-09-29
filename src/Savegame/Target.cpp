@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define _USE_MATH_DEFINES
 #include "Target.h"
-#include <cmath>
+#include "Craft.h"
+#include "SerializationHelper.h"
+#include "../fmath.h"
 #include "../Engine/Language.h"
 
 namespace OpenXcom
@@ -27,12 +28,24 @@ namespace OpenXcom
 /**
  * Initializes a target with blank coordinates.
  */
-Target::Target() : _lon(0.0), _lat(0.0), _followers()
+Target::Target() : _lon(0.0), _lat(0.0), _depth(0)
 {
 }
 
+/**
+ * Make sure no crafts are chasing this target.
+ */
 Target::~Target()
 {
+	std::vector<Target*> followers = _followers; // We need to copy this as it's gonna be modified
+	for (std::vector<Target*>::iterator i = followers.begin(); i != followers.end(); ++i)
+	{
+		Craft *craft = dynamic_cast<Craft*>(*i);
+		if (craft)
+		{
+			craft->returnToBase();
+		}
+	}
 }
 
 /**
@@ -41,30 +54,41 @@ Target::~Target()
  */
 void Target::load(const YAML::Node &node)
 {
-	node["lon"] >> _lon;
-	node["lat"] >> _lat;
+	_lon = node["lon"].as<double>(_lon);
+	_lat = node["lat"].as<double>(_lat);
+	if (const YAML::Node &name = node["name"])
+	{
+		_name = Language::utf8ToWstr(name.as<std::string>());
+	}
+	_depth = node["depth"].as<int>(_depth);
 }
 
 /**
  * Saves the target to a YAML file.
- * @param out YAML emitter.
+ * @returns YAML node.
  */
-void Target::save(YAML::Emitter &out) const
+YAML::Node Target::save() const
 {
-	out << YAML::BeginMap;
-	out << YAML::Key << "lon" << YAML::Value << _lon;
-	out << YAML::Key << "lat" << YAML::Value << _lat;
+	YAML::Node node;
+	node["lon"] = serializeDouble(_lon);
+	node["lat"] = serializeDouble(_lat);
+	if (!_name.empty())
+		node["name"] = Language::wstrToUtf8(_name);
+	if (_depth)
+		node["depth"] = _depth;
+	return node;
 }
 
 /**
  * Saves the target's unique identifiers to a YAML file.
- * @param out YAML emitter.
+ * @return YAML node.
  */
-void Target::saveId(YAML::Emitter &out) const
+YAML::Node Target::saveId() const
 {
-	out << YAML::BeginMap;
-	out << YAML::Key << "lon" << YAML::Value << _lon;
-	out << YAML::Key << "lat" << YAML::Value << _lat;
+	YAML::Node node;
+	node["lon"] = serializeDouble(_lon);
+	node["lat"] = serializeDouble(_lat);
+	return node;
 }
 
 /**
@@ -107,16 +131,78 @@ double Target::getLatitude() const
 void Target::setLatitude(double lat)
 {
 	_lat = lat;
+	// If you travel past a pole, continue on the other side of the globe.
+	if (_lat < -M_PI/2)
+	{
+		_lat = -M_PI - _lat;
+		setLongitude(_lon + M_PI);
+	}
+	else if (_lat > M_PI/2)
+	{
+		_lat = M_PI - _lat;
+		setLongitude(_lon - M_PI);
+	}
 }
 
 /**
- * Returns the list of crafts currently 
+ * Returns the target's unique identifying name.
+ * If there's no custom name, the language default is used.
+ * @param lang Language to get strings from.
+ * @return Full name.
+ */
+std::wstring Target::getName(Language *lang) const
+{
+	if (_name.empty())
+		return getDefaultName(lang);
+	return _name;
+}
+
+/**
+ * Changes the target's custom name.
+ * @param newName New custom name. If set to blank, the language default is used.
+ */
+void Target::setName(const std::wstring &newName)
+{
+	_name = newName;
+}
+
+/**
+ * Returns the list of crafts currently
  * following this target.
  * @return Pointer to list of crafts.
  */
 std::vector<Target*> *Target::getFollowers()
 {
 	return &_followers;
+}
+
+/**
+ * Returns the great circle distance to another
+ * target on the globe.
+ * @param target Pointer to other target.
+ * @returns Distance in radian.
+ */
+double Target::getDistance(const Target *target) const
+{
+	return acos(cos(_lat) * cos(target->getLatitude()) * cos(target->getLongitude() - _lon) + sin(_lat) * sin(target->getLatitude()));
+}
+
+/**
+ * Gets the mission site's depth.
+ * @return the depth of the site.
+ */
+int Target::getSiteDepth() const
+{
+	return _depth;
+}
+
+/**
+ * Sets the mission site's depth.
+ * @param depth the depth we want.
+ */
+void Target::setSiteDepth(int depth)
+{
+	_depth = depth;
 }
 
 }

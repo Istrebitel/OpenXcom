@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_NEXTTURNSTATE_H
-#define OPENXCOM_NEXTTURNSTATE_H
-
-#include <vector>
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -28,6 +25,9 @@ namespace OpenXcom
 class Window;
 class Text;
 class SavedBattleGame;
+class BattlescapeState;
+class Timer;
+class Surface;
 
 /**
  * Screen which announces the next turn.
@@ -35,18 +35,25 @@ class SavedBattleGame;
 class NextTurnState : public State
 {
 private:
+	static const int NEXT_TURN_DELAY = 500;
 	Window *_window;
 	Text *_txtTitle, *_txtTurn, *_txtSide, *_txtMessage;
 	SavedBattleGame *_battleGame;
+	BattlescapeState *_state;
+	Timer *_timer;
+	Surface *_bg;
 public:
 	/// Creates the Next Turn state.
-	NextTurnState(Game *game, SavedBattleGame *battleGame);
+	NextTurnState(SavedBattleGame *battleGame, BattlescapeState *state);
 	/// Cleans up the Next Turn state.
 	~NextTurnState();
 	/// Handler for clicking anything.
 	void handle(Action *action);
+	/// Handles the timer.
+	void think();
+	/// Closes the window.
+	void close();
+	void resize(int &dX, int &dY);
 };
 
 }
-
-#endif

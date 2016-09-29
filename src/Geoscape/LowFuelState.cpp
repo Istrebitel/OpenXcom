@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,17 +17,15 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "LowFuelState.h"
-#include <sstream>
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Savegame/Craft.h"
 #include "GeoscapeState.h"
+#include "../Engine/Options.h"
 
 namespace OpenXcom
 {
@@ -38,7 +36,7 @@ namespace OpenXcom
  * @param craft Pointer to the craft to display.
  * @param state Pointer to the Geoscape.
  */
-LowFuelState::LowFuelState(Game *game, Craft *craft, GeoscapeState *state) : State(game), _craft(craft), _state(state)
+LowFuelState::LowFuelState(Craft *craft, GeoscapeState *state) : _craft(craft), _state(state)
 {
 	_screen = false;
 
@@ -46,40 +44,39 @@ LowFuelState::LowFuelState(Game *game, Craft *craft, GeoscapeState *state) : Sta
 	_window = new Window(this, 224, 120, 16, 40, POPUP_BOTH);
 	_btnOk = new TextButton(90, 18, 30, 120);
 	_btnOk5Secs = new TextButton(90, 18, 136, 120);
-	_txtTitle = new Text(214, 16, 21, 60);
-	_txtMessage = new Text(214, 16, 21, 90);
-	
-	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(4)), Palette::backPos, 16);
+	_txtTitle = new Text(214, 17, 21, 60);
+	_txtMessage = new Text(214, 17, 21, 90);
 
-	add(_window);
-	add(_btnOk);
-	add(_btnOk5Secs);
-	add(_txtTitle);
-	add(_txtMessage);
+	// Set palette
+	setInterface("lowFuel");
+
+	add(_window, "window", "lowFuel");
+	add(_btnOk, "button", "lowFuel");
+	add(_btnOk5Secs, "button", "lowFuel");
+	add(_txtTitle, "text", "lowFuel");
+	add(_txtMessage, "text", "lowFuel");
+
+	centerAllSurfaces();
 
 	// Set up objects
-	_window->setColor(Palette::blockOffset(15)+2);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK12.SCR"));
+	_window->setBackground(_game->getMod()->getSurface("BACK12.SCR"));
 
-	_btnOk->setColor(Palette::blockOffset(8)+8);
-	_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&LowFuelState::btnOkClick);
+	_btnOk->onKeyboardPress((ActionHandler)&LowFuelState::btnOkClick, Options::keyCancel);
 
-	_btnOk5Secs->setColor(Palette::blockOffset(8)+8);
-	_btnOk5Secs->setText(_game->getLanguage()->getString("STR_OK_5_SECS"));
+	_btnOk5Secs->setText(tr("STR_OK_5_SECONDS"));
 	_btnOk5Secs->onMouseClick((ActionHandler)&LowFuelState::btnOk5SecsClick);
+	_btnOk5Secs->onKeyboardPress((ActionHandler)&LowFuelState::btnOk5SecsClick, Options::keyOk);
 
-	_txtTitle->setColor(Palette::blockOffset(8)+10);
 	_txtTitle->setAlign(ALIGN_CENTER);
 	_txtTitle->setBig();
 	_txtTitle->setText(_craft->getName(_game->getLanguage()));
 
-	_txtMessage->setColor(Palette::blockOffset(8)+10);
 	_txtMessage->setAlign(ALIGN_CENTER);
-	_txtMessage->setText(_game->getLanguage()->getString("STR_IS_LOW_ON_FUEL_RETURNING_TO_BASE"));
+	_txtMessage->setText(tr("STR_IS_LOW_ON_FUEL_RETURNING_TO_BASE"));
 
-	
+
 }
 
 /**
@@ -87,22 +84,14 @@ LowFuelState::LowFuelState(Game *game, Craft *craft, GeoscapeState *state) : Sta
  */
 LowFuelState::~LowFuelState()
 {
-	
-}
 
-/**
- * Resets the palette.
- */
-void LowFuelState::init()
-{
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(4)), Palette::backPos, 16);
 }
 
 /**
  * Closes the window.
  * @param action Pointer to an action.
  */
-void LowFuelState::btnOkClick(Action *action)
+void LowFuelState::btnOkClick(Action *)
 {
 	_game->popState();
 }
@@ -111,7 +100,7 @@ void LowFuelState::btnOkClick(Action *action)
  * Closes the window and sets the timer to 5 Secs.
  * @param action Pointer to an action.
  */
-void LowFuelState::btnOk5SecsClick(Action *action)
+void LowFuelState::btnOk5SecsClick(Action *)
 {
 	_state->timerReset();
 	_game->popState();

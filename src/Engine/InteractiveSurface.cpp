@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -22,6 +22,8 @@
 namespace OpenXcom
 {
 
+const SDLKey InteractiveSurface::SDLK_ANY = (SDLKey)-1; // using an unused keycode to represent an "any key"
+
 /**
  * Sets up a blank interactive surface with the specified size and position.
  * @param width Width in pixels.
@@ -29,9 +31,8 @@ namespace OpenXcom
  * @param x X position in pixels.
  * @param y Y position in pixels.
  */
-InteractiveSurface::InteractiveSurface(int width, int height, int x, int y) : Surface(width, height, x, y), _click(0), _press(0), _release(0), _in(0), _over(0), _out(0), _keyPress(0), _keyRelease(0), _isPressed(false), _isHovered(false), _isFocused(false), _validButton(0)
+InteractiveSurface::InteractiveSurface(int width, int height, int x, int y) : Surface(width, height, x, y), _buttonsPressed(0), _in(0), _over(0), _out(0), _isHovered(false), _isFocused(true), _listButton(false)
 {
-
 }
 
 /**
@@ -39,6 +40,44 @@ InteractiveSurface::InteractiveSurface(int width, int height, int x, int y) : Su
  */
 InteractiveSurface::~InteractiveSurface()
 {
+}
+
+bool InteractiveSurface::isButtonHandled(Uint8 button)
+{
+	bool handled = (_click.find(0) != _click.end() ||
+					_press.find(0) != _press.end() ||
+					_release.find(0) != _release.end());
+	if (!handled && button != 0)
+	{
+		handled = (_click.find(button) != _click.end() ||
+				   _press.find(button) != _press.end() ||
+				   _release.find(button) != _release.end());
+	}
+	return handled;
+}
+
+bool InteractiveSurface::isButtonPressed(Uint8 button) const
+{
+	if (button == 0)
+	{
+		return (_buttonsPressed != 0);
+	}
+	else
+	{
+		return (_buttonsPressed & SDL_BUTTON(button)) != 0;
+	}
+}
+
+void InteractiveSurface::setButtonPressed(Uint8 button, bool pressed)
+{
+	if (pressed)
+	{
+		_buttonsPressed = _buttonsPressed | SDL_BUTTON(button);
+	}
+	else
+	{
+		_buttonsPressed = _buttonsPressed & (!SDL_BUTTON(button));
+	}
 }
 
 /**
@@ -73,24 +112,34 @@ void InteractiveSurface::handle(Action *action, State *state)
 
 	if (action->getDetails()->type == SDL_MOUSEBUTTONUP || action->getDetails()->type == SDL_MOUSEBUTTONDOWN)
 	{
-		action->setXMouse(action->getDetails()->button.x);
-		action->setYMouse(action->getDetails()->button.y);
+		action->setMouseAction(action->getDetails()->button.x, action->getDetails()->button.y, getX(), getY());
 	}
 	else if (action->getDetails()->type == SDL_MOUSEMOTION)
 	{
-		action->setXMouse(action->getDetails()->motion.x);
-		action->setYMouse(action->getDetails()->motion.y);
+		action->setMouseAction(action->getDetails()->motion.x, action->getDetails()->motion.y, getX(), getY());
 	}
 
-	if (action->getXMouse() != -1 && action->getYMouse() != -1)
+	if (action->isMouseAction())
 	{
-		if ((action->getXMouse() >= getX() * action->getXScale() && action->getXMouse() < (getX() + getWidth()) * action->getXScale()) &&
-			(action->getYMouse() >= getY() * action->getYScale() && action->getYMouse() < (getY() + getHeight()) * action->getYScale()))
+		if ((action->getAbsoluteXMouse() >= getX() && action->getAbsoluteXMouse() < getX() + getWidth()) &&
+			(action->getAbsoluteYMouse() >= getY() && action->getAbsoluteYMouse() < getY() + getHeight()))
 		{
 			if (!_isHovered)
 			{
 				_isHovered = true;
 				mouseIn(action, state);
+			}
+			if (_listButton && action->getDetails()->type == SDL_MOUSEMOTION)
+			{
+				_buttonsPressed = SDL_GetMouseState(0, 0);
+				for (Uint8 i = 1; i <= NUM_BUTTONS; ++i)
+				{
+					if (isButtonPressed(i))
+					{
+						action->getDetails()->button.button = i;
+						mousePress(action, state);
+					}
+				}
 			}
 			mouseOver(action, state);
 		}
@@ -100,25 +149,40 @@ void InteractiveSurface::handle(Action *action, State *state)
 			{
 				_isHovered = false;
 				mouseOut(action, state);
+				if (_listButton && action->getDetails()->type == SDL_MOUSEMOTION)
+				{
+					for (Uint8 i = 1; i <= NUM_BUTTONS; ++i)
+					{
+						if (isButtonPressed(i))
+						{
+							setButtonPressed(i, false);
+						}
+						action->getDetails()->button.button = i;
+						mouseRelease(action, state);
+					}
+				}
 			}
 		}
 	}
 
-	if (!_isPressed && action->getDetails()->type == SDL_MOUSEBUTTONDOWN && (_validButton == 0 || _validButton == action->getDetails()->button.button))
-	{		
-		if (_isHovered)
+	if (action->getDetails()->type == SDL_MOUSEBUTTONDOWN)
+	{
+		if (_isHovered && !isButtonPressed(action->getDetails()->button.button))
 		{
-			_isPressed = true;
+			setButtonPressed(action->getDetails()->button.button, true);
 			mousePress(action, state);
 		}
 	}
-	else if (_isPressed && action->getDetails()->type == SDL_MOUSEBUTTONUP && (_validButton == 0 || _validButton == action->getDetails()->button.button))
+	else if (action->getDetails()->type == SDL_MOUSEBUTTONUP)
 	{
-		_isPressed = false;
-		mouseRelease(action, state);
-		if (_isHovered)
+		if (isButtonPressed(action->getDetails()->button.button))
 		{
-			mouseClick(action, state);
+			setButtonPressed(action->getDetails()->button.button, false);
+			mouseRelease(action, state);
+			if (_isHovered)
+			{
+				mouseClick(action, state);
+			}
 		}
 	}
 
@@ -136,12 +200,23 @@ void InteractiveSurface::handle(Action *action, State *state)
 }
 
 /**
- * Marks ths surface as focused. Surfaces will only receive
+ * Changes the surface's focus. Surfaces will only receive
  * keyboard events if focused.
+ * @param focus Is it focused?
  */
-void InteractiveSurface::focus()
+void InteractiveSurface::setFocus(bool focus)
 {
-	_isFocused = true;
+	_isFocused = focus;
+}
+
+/**
+ * Returns the surface's focus. Surfaces will only receive
+ * keyboard events if focused.
+ * @return Is it focused?
+ */
+bool InteractiveSurface::isFocused() const
+{
+	return _isFocused;
 }
 
 /**
@@ -151,19 +226,19 @@ void InteractiveSurface::focus()
  */
 void InteractiveSurface::unpress(State *state)
 {
-	if (_isPressed)
+	if (isButtonPressed())
 	{
-		_isPressed = false;
+		_buttonsPressed = 0;
 		SDL_Event ev;
 		ev.type = SDL_MOUSEBUTTONUP;
 		ev.button.button = SDL_BUTTON_LEFT;
-		Action a = Action(&ev, 0.0, 0.0);
+		Action a = Action(&ev, 0.0, 0.0, 0, 0);
 		mouseRelease(&a, state);
 	}
 }
 
 /**
- * Called everytime there's a mouse press over the surface.
+ * Called every time there's a mouse press over the surface.
  * Allows the surface to have custom functionality for this action,
  * and can be called externally to simulate the action.
  * @param action Pointer to an action.
@@ -171,14 +246,22 @@ void InteractiveSurface::unpress(State *state)
  */
 void InteractiveSurface::mousePress(Action *action, State *state)
 {
-	if (_press != 0)
+	std::map<Uint8, ActionHandler>::iterator allHandler = _press.find(0);
+	std::map<Uint8, ActionHandler>::iterator oneHandler = _press.find(action->getDetails()->button.button);
+	if (allHandler != _press.end())
 	{
-		(state->*_press)(action);
+		ActionHandler handler = allHandler->second;
+		(state->*handler)(action);
+	}
+	if (oneHandler != _press.end())
+	{
+		ActionHandler handler = oneHandler->second;
+		(state->*handler)(action);
 	}
 }
 
 /**
- * Called everytime there's a mouse release over the surface.
+ * Called every time there's a mouse release over the surface.
  * Allows the surface to have custom functionality for this action,
  * and can be called externally to simulate the action.
  * @param action Pointer to an action.
@@ -186,14 +269,22 @@ void InteractiveSurface::mousePress(Action *action, State *state)
  */
 void InteractiveSurface::mouseRelease(Action *action, State *state)
 {
-	if (_release != 0)
+	std::map<Uint8, ActionHandler>::iterator allHandler = _release.find(0);
+	std::map<Uint8, ActionHandler>::iterator oneHandler = _release.find(action->getDetails()->button.button);
+	if (allHandler != _release.end())
 	{
-		(state->*_release)(action);
+		ActionHandler handler = allHandler->second;
+		(state->*handler)(action);
+	}
+	if (oneHandler != _release.end())
+	{
+		ActionHandler handler = oneHandler->second;
+		(state->*handler)(action);
 	}
 }
 
 /**
- * Called everytime there's a mouse click on the surface.
+ * Called every time there's a mouse click on the surface.
  * Allows the surface to have custom functionality for this action,
  * and can be called externally to simulate the action.
  * @param action Pointer to an action.
@@ -201,14 +292,22 @@ void InteractiveSurface::mouseRelease(Action *action, State *state)
  */
 void InteractiveSurface::mouseClick(Action *action, State *state)
 {
-	if (_click != 0)
+	std::map<Uint8, ActionHandler>::iterator allHandler = _click.find(0);
+	std::map<Uint8, ActionHandler>::iterator oneHandler = _click.find(action->getDetails()->button.button);
+	if (allHandler != _click.end())
 	{
-		(state->*_click)(action);
+		ActionHandler handler = allHandler->second;
+		(state->*handler)(action);
+	}
+	if (oneHandler != _click.end())
+	{
+		ActionHandler handler = oneHandler->second;
+		(state->*handler)(action);
 	}
 }
 
 /**
- * Called everytime the mouse moves into the surface.
+ * Called every time the mouse moves into the surface.
  * Allows the surface to have custom functionality for this action,
  * and can be called externally to simulate the action.
  * @param action Pointer to an action.
@@ -223,7 +322,7 @@ void InteractiveSurface::mouseIn(Action *action, State *state)
 }
 
 /**
- * Called everytime the mouse moves over the surface.
+ * Called every time the mouse moves over the surface.
  * Allows the surface to have custom functionality for this action,
  * and can be called externally to simulate the action.
  * @param action Pointer to an action.
@@ -238,7 +337,7 @@ void InteractiveSurface::mouseOver(Action *action, State *state)
 }
 
 /**
- * Called everytime the mouse moves out of the surface.
+ * Called every time the mouse moves out of the surface.
  * Allows the surface to have custom functionality for this action,
  * and can be called externally to simulate the action.
  * @param action Pointer to an action.
@@ -253,7 +352,7 @@ void InteractiveSurface::mouseOut(Action *action, State *state)
 }
 
 /**
- * Called everytime there's a keyboard press when the surface is focused.
+ * Called every time there's a keyboard press when the surface is focused.
  * Allows the surface to have custom functionality for this action,
  * and can be called externally to simulate the action.
  * @param action Pointer to an action.
@@ -261,14 +360,24 @@ void InteractiveSurface::mouseOut(Action *action, State *state)
  */
 void InteractiveSurface::keyboardPress(Action *action, State *state)
 {
-	if (_keyPress != 0)
+	std::map<SDLKey, ActionHandler>::iterator allHandler = _keyPress.find(SDLK_ANY);
+	std::map<SDLKey, ActionHandler>::iterator oneHandler = _keyPress.find(action->getDetails()->key.keysym.sym);
+	if (allHandler != _keyPress.end())
 	{
-		(state->*_keyPress)(action);
+		ActionHandler handler = allHandler->second;
+		(state->*handler)(action);
+	}
+	// Check if Ctrl, Alt and Shift aren't pressed
+	bool mod = ((action->getDetails()->key.keysym.mod & (KMOD_CTRL|KMOD_ALT|KMOD_SHIFT)) != 0);
+	if (oneHandler != _keyPress.end() && !mod)
+	{
+		ActionHandler handler = oneHandler->second;
+		(state->*handler)(action);
 	}
 }
 
 /**
- * Called everytime there's a keyboard release over the surface.
+ * Called every time there's a keyboard release over the surface.
  * Allows the surface to have custom functionality for this action,
  * and can be called externally to simulate the action.
  * @param action Pointer to an action.
@@ -276,41 +385,75 @@ void InteractiveSurface::keyboardPress(Action *action, State *state)
  */
 void InteractiveSurface::keyboardRelease(Action *action, State *state)
 {
-	if (_keyRelease != 0)
+	std::map<SDLKey, ActionHandler>::iterator allHandler = _keyRelease.find(SDLK_ANY);
+	std::map<SDLKey, ActionHandler>::iterator oneHandler = _keyRelease.find(action->getDetails()->key.keysym.sym);
+	if (allHandler != _keyRelease.end())
 	{
-		(state->*_keyRelease)(action);
+		ActionHandler handler = allHandler->second;
+		(state->*handler)(action);
+	}
+	// Check if Ctrl, Alt and Shift aren't pressed
+	bool mod = ((action->getDetails()->key.keysym.mod & (KMOD_CTRL|KMOD_ALT|KMOD_SHIFT)) != 0);
+	if (oneHandler != _keyRelease.end() && !mod)
+	{
+		ActionHandler handler = oneHandler->second;
+		(state->*handler)(action);
 	}
 }
 
 /**
- * Sets a function to be called everytime the surface is mouse clicked.
+ * Sets a function to be called every time the surface is mouse clicked.
  * @param handler Action handler.
+ * @param button Mouse button to check for. Set to 0 for any button.
  */
-void InteractiveSurface::onMouseClick(ActionHandler handler)
+void InteractiveSurface::onMouseClick(ActionHandler handler, Uint8 button)
 {
-	_click = handler;
+	if (handler != 0)
+	{
+		_click[button] = handler;
+	}
+	else
+	{
+		_click.erase(button);
+	}
 }
 
 /**
- * Sets a function to be called everytime the surface is mouse pressed.
+ * Sets a function to be called every time the surface is mouse pressed.
  * @param handler Action handler.
+ * @param button Mouse button to check for. Set to 0 for any button.
  */
-void InteractiveSurface::onMousePress(ActionHandler handler)
+void InteractiveSurface::onMousePress(ActionHandler handler, Uint8 button)
 {
-	_press = handler;
+	if (handler != 0)
+	{
+		_press[button] = handler;
+	}
+	else
+	{
+		_press.erase(button);
+	}
 }
 
 /**
- * Sets a function to be called everytime the surface is mouse released.
+ * Sets a function to be called every time the surface is mouse released.
  * @param handler Action handler.
+ * @param button Mouse button to check for. Set to 0 for any button.
  */
-void InteractiveSurface::onMouseRelease(ActionHandler handler)
+void InteractiveSurface::onMouseRelease(ActionHandler handler, Uint8 button)
 {
-	_release = handler;
+	if (handler != 0)
+	{
+		_release[button] = handler;
+	}
+	else
+	{
+		_release.erase(button);
+	}
 }
 
 /**
- * Sets a function to be called everytime the mouse moves into the surface.
+ * Sets a function to be called every time the mouse moves into the surface.
  * @param handler Action handler.
  */
 void InteractiveSurface::onMouseIn(ActionHandler handler)
@@ -319,7 +462,7 @@ void InteractiveSurface::onMouseIn(ActionHandler handler)
 }
 
 /**
- * Sets a function to be called everytime the mouse moves over the surface.
+ * Sets a function to be called every time the mouse moves over the surface.
  * @param handler Action handler.
  */
 void InteractiveSurface::onMouseOver(ActionHandler handler)
@@ -328,7 +471,7 @@ void InteractiveSurface::onMouseOver(ActionHandler handler)
 }
 
 /**
- * Sets a function to be called everytime the mouse moves out of the surface.
+ * Sets a function to be called every time the mouse moves out of the surface.
  * @param handler Action handler.
  */
 void InteractiveSurface::onMouseOut(ActionHandler handler)
@@ -337,21 +480,45 @@ void InteractiveSurface::onMouseOut(ActionHandler handler)
 }
 
 /**
- * Sets a function to be called everytime a key is pressed when the surface is focused.
+ * Sets a function to be called every time a key is pressed when the surface is focused.
  * @param handler Action handler.
+ * @param key Keyboard button to check for (note: ignores key modifiers). Set to 0 for any key.
  */
-void InteractiveSurface::onKeyboardPress(ActionHandler handler)
+void InteractiveSurface::onKeyboardPress(ActionHandler handler, SDLKey key)
 {
-	_keyPress = handler;
+	if (handler != 0)
+	{
+		_keyPress[key] = handler;
+	}
+	else
+	{
+		_keyPress.erase(key);
+	}
 }
 
 /**
- * Sets a function to be called everytime a key is released when the surface is focused.
+ * Sets a function to be called every time a key is released when the surface is focused.
  * @param handler Action handler.
+ * @param key Keyboard button to check for (note: ignores key modifiers). Set to 0 for any key.
  */
-void InteractiveSurface::onKeyboardRelease(ActionHandler handler)
+void InteractiveSurface::onKeyboardRelease(ActionHandler handler, SDLKey key)
 {
-	_keyRelease = handler;
+	if (handler != 0)
+	{
+		_keyRelease[key] = handler;
+	}
+	else
+	{
+		_keyRelease.erase(key);
+	}
+}
+
+/**
+ * Sets a flag for this button to say "i'm a member of a textList" to true.
+ */
+void InteractiveSurface::setListButton()
+{
+	_listButton = true;
 }
 
 }

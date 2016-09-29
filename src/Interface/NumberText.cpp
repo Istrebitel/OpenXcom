@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -30,7 +30,7 @@ namespace OpenXcom
  * @param x X position in pixels.
  * @param y Y position in pixels.
  */
-NumberText::NumberText(int width, int height, int x, int y) : Surface(width, height, x, y), _value(0), _color(0)
+NumberText::NumberText(int width, int height, int x, int y) : Surface(width, height, x, y), _value(0), _bordered(false), _color(0)
 {
 	_chars[0] = new Surface(3, 5);
 	_chars[0]->lock();
@@ -177,6 +177,28 @@ NumberText::NumberText(int width, int height, int x, int y) : Surface(width, hei
 	_chars[9]->setPixel(1, 4, 1);
 	_chars[9]->setPixel(2, 4, 1);
 	_chars[9]->unlock();
+
+	for (int i = 0; i < 10; ++i)
+	{
+		_borderedChars[i] = new Surface(5, 7);
+		// give it a border
+		// this is the "darker" shade that goes in the corners.
+		for (int x = 0; x <= 2; x += 2)
+		{
+			for (int y = 0; y <= 2; y += 2)
+			{
+				_chars[i]->blitNShade(_borderedChars[i], x, y, 11);
+			}
+		}
+		// this is the "slightly darker" version that goes in four cardinals.
+		for (int z = 0; z <= 2; z += 2)
+		{
+			_chars[i]->blitNShade(_borderedChars[i], z, 1, 8);
+			_chars[i]->blitNShade(_borderedChars[i], 1, z, 8);
+		}
+		// and finally the number itself
+		_chars[i]->blitNShade(_borderedChars[i], 1, 1, 0);
+	}
 }
 
 /**
@@ -184,9 +206,10 @@ NumberText::NumberText(int width, int height, int x, int y) : Surface(width, hei
  */
 NumberText::~NumberText()
 {
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 10; ++i)
 	{
 		delete _chars[i];
+		delete _borderedChars[i];
 	}
 }
 
@@ -197,7 +220,7 @@ NumberText::~NumberText()
 void NumberText::setValue(unsigned int value)
 {
 	_value = value;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -216,7 +239,7 @@ unsigned int NumberText::getValue() const
 void NumberText::setColor(Uint8 color)
 {
 	_color = color;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -237,9 +260,10 @@ Uint8 NumberText::getColor() const
 void NumberText::setPalette(SDL_Color *colors, int firstcolor, int ncolors)
 {
 	Surface::setPalette(colors, firstcolor, ncolors);
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 10; ++i)
 	{
 		_chars[i]->setPalette(colors, firstcolor, ncolors);
+		_borderedChars[i]->setPalette(colors, firstcolor, ncolors);
 	}
 }
 
@@ -248,21 +272,38 @@ void NumberText::setPalette(SDL_Color *colors, int firstcolor, int ncolors)
  */
 void NumberText::draw()
 {
-	clear();
-
-	std::stringstream ss;
+	Surface::draw();
+	std::ostringstream ss;
 	ss << _value;
 	std::string s = ss.str();
 	int x = 0;
-	for (std::string::iterator i = s.begin(); i != s.end(); ++i)
+	if (!_bordered)
 	{
-		_chars[*i - '0']->setX(x);
-		_chars[*i - '0']->setY(0);
-		_chars[*i - '0']->blit(this);
-		x += _chars[*i - '0']->getWidth() + 1;
+		for (std::string::iterator i = s.begin(); i != s.end(); ++i)
+		{
+			_chars[*i - '0']->setX(x);
+			_chars[*i - '0']->setY(0);
+			_chars[*i - '0']->blit(this);
+			x += _chars[*i - '0']->getWidth() + 1;
+		}
+	}
+	else
+	{
+		for (std::string::iterator i = s.begin(); i != s.end(); ++i)
+		{
+			_borderedChars[*i - '0']->setX(x);
+			_borderedChars[*i - '0']->setY(0);
+			_borderedChars[*i - '0']->blit(this);
+			x += _chars[*i - '0']->getWidth() + 1; // no this isn't a typo, i want to use the same spacing regardless.
+		}
 	}
 
 	this->offset(_color);
+}
+
+void NumberText::setBordered(bool bordered)
+{
+	_bordered = bordered;
 }
 
 }

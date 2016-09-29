@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_COUNTRY_H
-#define OPENXCOM_COUNTRY_H
-
-#include "yaml.h"
+#include <vector>
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -35,8 +34,9 @@ class Country
 {
 private:
 	RuleCountry *_rules;
-	int _funding, _change;
-	int _activityXcom, _activityAlien;
+	bool _pact, _newPact;
+	std::vector<int> _funding, _activityXcom, _activityAlien;
+	int _satisfaction;
 public:
 	/// Creates a new country of the specified type.
 	Country(RuleCountry *rules, bool gen = true);
@@ -45,17 +45,33 @@ public:
 	/// Loads the country from YAML.
 	void load(const YAML::Node& node);
 	/// Saves the country to YAML.
-	void save(YAML::Emitter& out) const;
+	YAML::Node save() const;
 	/// Gets the country's ruleset.
-	RuleCountry *const getRules() const;
+	RuleCountry *getRules() const;
 	/// Gets the country's funding.
-	int getFunding() const;
+	std::vector<int> &getFunding();
 	/// Sets the country's funding.
 	void setFunding(int funding);
-	/// Gets the country's funding change.
-	int getChange() const;
+	/// get the country's satisfaction level
+	int getSatisfaction() const;
+	/// add xcom activity in this country
+	void addActivityXcom(int activity);
+	/// add alien activity in this country
+	void addActivityAlien(int activity);
+	/// get xcom activity to this country
+	std::vector<int> &getActivityXcom();
+	/// get xcom activity to this country
+	std::vector<int> &getActivityAlien();
+	/// store last month's counters, start new counters, set this month's change.
+	void newMonth(int xcomTotal, int alienTotal, int pactScore);
+	/// are we signing a new pact?
+	bool getNewPact() const;
+	/// sign a pact at the end of this month.
+	void setNewPact();
+	/// have we signed a pact?
+	bool getPact() const;
+	/// sign a pact immediately
+	void setPact();
 };
 
 }
-
-#endif

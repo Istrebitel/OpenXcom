@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,11 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_ARTICLESTATECRAFTWEAPON_H
-#define OPENXCOM_ARTICLESTATECRAFTWEAPON_H
-
-#include <string>
 #include "ArticleState.h"
 
 namespace OpenXcom
@@ -29,21 +25,20 @@ namespace OpenXcom
 	class Text;
 	class TextList;
 	class ArticleDefinitionCraftWeapon;
-	
+
 	/**
 	 * ArticleStateCraftWeapon has a caption, background image and a stats block.
 	 */
-	
+
 	class ArticleStateCraftWeapon : public ArticleState
 	{
 	public:
-		ArticleStateCraftWeapon(Game *game, ArticleDefinitionCraftWeapon *article_defs);
+		ArticleStateCraftWeapon(ArticleDefinitionCraftWeapon *article_defs);
 		virtual ~ArticleStateCraftWeapon();
-		
+
 	protected:
 		Text *_txtTitle;
+		Text *_txtInfo;
 		TextList *_lstInfo;
 	};
 }
-
-#endif

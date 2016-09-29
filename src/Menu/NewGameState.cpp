@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,16 +18,16 @@
  */
 #include "NewGameState.h"
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/TextButton.h"
+#include "../Interface/ToggleTextButton.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
-#include "../Ruleset/XcomRuleset.h"
 #include "../Geoscape/GeoscapeState.h"
 #include "../Geoscape/BuildNewBaseState.h"
+#include "../Engine/Options.h"
+#include "../Savegame/SavedGame.h"
 
 namespace OpenXcom
 {
@@ -36,53 +36,74 @@ namespace OpenXcom
  * Initializes all the elements in the Difficulty window.
  * @param game Pointer to the core game.
  */
-NewGameState::NewGameState(Game *game) : State(game)
+NewGameState::NewGameState()
 {
 	// Create objects
 	_window = new Window(this, 192, 180, 64, 10, POPUP_VERTICAL);
-	_btnBeginner = new TextButton(160, 18, 80, 55);
-	_btnExperienced = new TextButton(160, 18, 80, 80);
-	_btnVeteran = new TextButton(160, 18, 80, 105);
-	_btnGenius = new TextButton(160, 18, 80, 130);
-	_btnSuperhuman = new TextButton(160, 18, 80, 155);
-	_txtTitle = new Text(192, 10, 64, 30);
-	
-	add(_window);
-	add(_btnBeginner);
-	add(_btnExperienced);
-	add(_btnVeteran);
-	add(_btnGenius);
-	add(_btnSuperhuman);
-	add(_txtTitle);
+	_btnBeginner = new TextButton(160, 18, 80, 32);
+	_btnExperienced = new TextButton(160, 18, 80, 52);
+	_btnVeteran = new TextButton(160, 18, 80, 72);
+	_btnGenius = new TextButton(160, 18, 80, 92);
+	_btnSuperhuman = new TextButton(160, 18, 80, 112);
+	_btnIronman = new ToggleTextButton(78, 18, 80, 138);
+	_btnOk = new TextButton(78, 16, 80, 164);
+	_btnCancel = new TextButton(78, 16, 162, 164);
+	_txtTitle = new Text(192, 9, 64, 20);
+	_txtIronman = new Text(90, 24, 162, 135);
+
+	_difficulty = _btnBeginner;
+
+	// Set palette
+	setInterface("newGameMenu");
+
+	add(_window, "window", "newGameMenu");
+	add(_btnBeginner, "button", "newGameMenu");
+	add(_btnExperienced, "button", "newGameMenu");
+	add(_btnVeteran, "button", "newGameMenu");
+	add(_btnGenius, "button", "newGameMenu");
+	add(_btnSuperhuman, "button", "newGameMenu");
+	add(_btnIronman, "ironman", "newGameMenu");
+	add(_btnOk, "button", "newGameMenu");
+	add(_btnCancel, "button", "newGameMenu");
+	add(_txtTitle, "text", "newGameMenu");
+	add(_txtIronman, "ironman", "newGameMenu");
+
+	centerAllSurfaces();
 
 	// Set up objects
-	_window->setColor(Palette::blockOffset(8)+8);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK01.SCR"));
+	_window->setBackground(_game->getMod()->getSurface("BACK01.SCR"));
 
-	_btnBeginner->setColor(Palette::blockOffset(8)+8);
-	_btnBeginner->setText(_game->getLanguage()->getString("STR_1_BEGINNER"));
-	_btnBeginner->onMouseClick((ActionHandler)&NewGameState::btnBeginnerClick);
+	_btnBeginner->setText(tr("STR_1_BEGINNER"));
+	_btnBeginner->setGroup(&_difficulty);
 
-	_btnExperienced->setColor(Palette::blockOffset(8)+8);
-	_btnExperienced->setText(_game->getLanguage()->getString("STR_2_EXPERIENCED"));
-	_btnExperienced->onMouseClick((ActionHandler)&NewGameState::btnExperiencedClick);
+	_btnExperienced->setText(tr("STR_2_EXPERIENCED"));
+	_btnExperienced->setGroup(&_difficulty);
 
-	_btnVeteran->setColor(Palette::blockOffset(8)+8);
-	_btnVeteran->setText(_game->getLanguage()->getString("STR_3_VETERAN"));
-	_btnVeteran->onMouseClick((ActionHandler)&NewGameState::btnVeteranClick);
+	_btnVeteran->setText(tr("STR_3_VETERAN"));
+	_btnVeteran->setGroup(&_difficulty);
 
-	_btnGenius->setColor(Palette::blockOffset(8)+8);
-	_btnGenius->setText(_game->getLanguage()->getString("STR_4_GENIUS"));
-	_btnGenius->onMouseClick((ActionHandler)&NewGameState::btnGeniusClick);
+	_btnGenius->setText(tr("STR_4_GENIUS"));
+	_btnGenius->setGroup(&_difficulty);
 
-	_btnSuperhuman->setColor(Palette::blockOffset(8)+8);
-	_btnSuperhuman->setText(_game->getLanguage()->getString("STR_5_SUPERHUMAN"));
-	_btnSuperhuman->onMouseClick((ActionHandler)&NewGameState::btnSuperhumanClick);
+	_btnSuperhuman->setText(tr("STR_5_SUPERHUMAN"));
+	_btnSuperhuman->setGroup(&_difficulty);
 
-	_txtTitle->setColor(Palette::blockOffset(8)+10);
+	_btnIronman->setText(tr("STR_IRONMAN"));
+
+	_btnOk->setText(tr("STR_OK"));
+	_btnOk->onMouseClick((ActionHandler)&NewGameState::btnOkClick);
+	_btnOk->onKeyboardPress((ActionHandler)&NewGameState::btnOkClick, Options::keyOk);
+
+	_btnCancel->setText(tr("STR_CANCEL"));
+	_btnCancel->onMouseClick((ActionHandler)&NewGameState::btnCancelClick);
+	_btnCancel->onKeyboardPress((ActionHandler)&NewGameState::btnCancelClick, Options::keyCancel);
+
 	_txtTitle->setAlign(ALIGN_CENTER);
-	_txtTitle->setSmall();
-	_txtTitle->setText(_game->getLanguage()->getString("STR_SELECT_DIFFICULTY_LEVEL"));
+	_txtTitle->setText(tr("STR_SELECT_DIFFICULTY_LEVEL"));
+
+	_txtIronman->setWordWrap(true);
+	_txtIronman->setVerticalAlign(ALIGN_MIDDLE);
+	_txtIronman->setText(tr("STR_IRONMAN_DESC"));
 }
 
 /**
@@ -90,71 +111,55 @@ NewGameState::NewGameState(Game *game) : State(game)
  */
 NewGameState::~NewGameState()
 {
-	
+
 }
 
 /**
- * Sets up a new saved game and jumps to the Geoscape.
- * @param diff Difficulty for the saved game.
+ * Returns to the previous screen.
+ * @param action Pointer to an action.
  */
-void NewGameState::newGame(GameDifficulty diff)
+void NewGameState::btnOkClick(Action *)
 {
-	_game->setRuleset(new XcomRuleset());
-	_game->setSavedGame(_game->getRuleset()->newSave(diff));
-	GeoscapeState *gs = new GeoscapeState(_game);
+	GameDifficulty diff = DIFF_BEGINNER;
+	if (_difficulty == _btnBeginner)
+	{
+		diff = DIFF_BEGINNER;
+	}
+	else if (_difficulty == _btnExperienced)
+	{
+		diff = DIFF_EXPERIENCED;
+	}
+	else if (_difficulty == _btnVeteran)
+	{
+		diff = DIFF_VETERAN;
+	}
+	else if (_difficulty == _btnGenius)
+	{
+		diff = DIFF_GENIUS;
+	}
+	else if (_difficulty == _btnSuperhuman)
+	{
+		diff = DIFF_SUPERHUMAN;
+	}
+	SavedGame *save = _game->getMod()->newSave();
+	save->setDifficulty(diff);
+	save->setIronman(_btnIronman->getPressed());
+	_game->setSavedGame(save);
+
+	GeoscapeState *gs = new GeoscapeState;
 	_game->setState(gs);
 	gs->init();
-	_game->pushState(new BuildNewBaseState(_game, _game->getSavedGame()->getBases()->back(), gs->getGlobe(), true));
+	_game->pushState(new BuildNewBaseState(_game->getSavedGame()->getBases()->back(), gs->getGlobe(), true));
 }
 
 /**
- * Creates a new game in Beginner difficulty and
- * jumps to the Geoscape screen.
+ * Returns to the previous screen.
  * @param action Pointer to an action.
  */
-void NewGameState::btnBeginnerClick(Action *action)
+void NewGameState::btnCancelClick(Action *)
 {
-	newGame(DIFF_BEGINNER);
-}
-
-/**
- * Creates a new game in Experienced difficulty and
- * jumps to the Geoscape screen.
- * @param action Pointer to an action.
- */
-void NewGameState::btnExperiencedClick(Action *action)
-{
-	newGame(DIFF_EXPERIENCED);
-}
-
-/**
- * Creates a new game in Veteran difficulty and
- * jumps to the Geoscape screen.
- * @param action Pointer to an action.
- */
-void NewGameState::btnVeteranClick(Action *action)
-{
-	newGame(DIFF_VETERAN);
-}
-
-/**
- * Creates a new game in Genius difficulty and
- * jumps to the Geoscape screen.
- * @param action Pointer to an action.
- */
-void NewGameState::btnGeniusClick(Action *action)
-{
-	newGame(DIFF_GENIUS);
-}
-
-/**
- * Creates a new game in Superhuman difficulty and
- * jumps to the Geoscape screen.
- * @param action Pointer to an action.
- */
-void NewGameState::btnSuperhumanClick(Action *action)
-{
-	newGame(DIFF_SUPERHUMAN);
+	_game->setSavedGame(0);
+	_game->popState();
 }
 
 }

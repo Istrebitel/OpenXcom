@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_UFODETECTEDSTATE_H
-#define OPENXCOM_UFODETECTEDSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -39,19 +37,18 @@ class UfoDetectedState : public State
 private:
 	Ufo *_ufo;
 	GeoscapeState *_state;
-	bool _detected;
 
-	TextButton *_btnCentre, *_btnCancel;
+	TextButton *_btnIntercept, *_btnCentre, *_btnCancel;
 	Window *_window;
-	Text *_txtUfo, *_txtDetected;
-	TextList *_lstInfo;
+	Text *_txtUfo, *_txtDetected, *_txtHyperwave;
+	TextList *_lstInfo, *_lstInfo2;
 public:
 	/// Creates the Ufo Detected state.
-	UfoDetectedState(Game *game, Ufo *ufo, GeoscapeState *state, bool detected);
+	UfoDetectedState(Ufo *ufo, GeoscapeState *state, bool detected, bool hyper);
 	/// Cleans up the Ufo Detected state.
 	~UfoDetectedState();
-	/// Updates the palette.
-	void init();
+	/// Handler for clicking the Intercept button.
+	void btnInterceptClick(Action *action);
 	/// Handler for clicking the Centre on UFO button.
 	void btnCentreClick(Action *action);
 	/// Handler for clicking the Cancel button.
@@ -59,5 +56,3 @@ public:
 };
 
 }
-
-#endif

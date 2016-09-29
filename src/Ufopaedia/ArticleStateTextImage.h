@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,11 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_ARTICLESTATETEXTIMAGE_H
-#define OPENXCOM_ARTICLESTATETEXTIMAGE_H
-
-#include <string>
 #include "ArticleState.h"
 
 namespace OpenXcom
@@ -28,21 +24,20 @@ namespace OpenXcom
 	class Game;
 	class Text;
 	class ArticleStateTextImage;
-	
+	class ArticleDefinitionTextImage;
+
 	/**
 	 * ArticleStateTextImage has a title, text block and a background image.
 	 */
-	
+
 	class ArticleStateTextImage : public ArticleState
 	{
 	public:
-		ArticleStateTextImage(Game *game, ArticleDefinitionTextImage *defs);
+		ArticleStateTextImage(ArticleDefinitionTextImage *defs);
 		virtual ~ArticleStateTextImage();
-		
+
 	protected:
 		Text *_txtTitle;
 		Text *_txtInfo;
 	};
 }
-
-#endif

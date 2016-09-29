@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_GEOSCAPECRAFTSTATE_H
-#define OPENXCOM_GEOSCAPECRAFTSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -44,14 +42,12 @@ private:
 
 	TextButton *_btnBase, *_btnTarget, *_btnPatrol, *_btnCancel;
 	Window *_window;
-	Text *_txtTitle, *_txtStatus, *_txtBase, *_txtSpeed, *_txtMaxSpeed, *_txtAltitude, *_txtFuel, *_txtW1Name, *_txtW1Ammo, *_txtW2Name, *_txtW2Ammo, *_txtRedirect;
+	Text *_txtTitle, *_txtStatus, *_txtBase, *_txtSpeed, *_txtMaxSpeed, *_txtAltitude, *_txtFuel, *_txtDamage, *_txtW1Name, *_txtW1Ammo, *_txtW2Name, *_txtW2Ammo, *_txtRedirect, *_txtSoldier, *_txtHWP;
 public:
 	/// Creates the Geoscape Craft state.
-	GeoscapeCraftState(Game *game, Craft *craft, Globe *globe, Waypoint *waypoint);
+	GeoscapeCraftState(Craft *craft, Globe *globe, Waypoint *waypoint);
 	/// Cleans up the Geoscape Craft state.
 	~GeoscapeCraftState();
-	/// Updates the palette.
-	void init();
 	/// Handler for clicking the Return To Base button.
 	void btnBaseClick(Action *action);
 	/// Handler for clicking the Select New Target button.
@@ -63,5 +59,3 @@ public:
 };
 
 }
-
-#endif

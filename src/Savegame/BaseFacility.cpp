@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,12 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define _USE_MATH_DEFINES
 #include "BaseFacility.h"
-#include <cmath>
-#include "../Ruleset/RuleBaseFacility.h"
+#include "../Mod/RuleBaseFacility.h"
 #include "Base.h"
-#include "Target.h"
 
 namespace OpenXcom
 {
@@ -30,10 +27,8 @@ namespace OpenXcom
  * Initializes a base facility of the specified type.
  * @param rules Pointer to ruleset.
  * @param base Pointer to base of origin.
- * @param x X position in grid squares.
- * @param y Y position in grid squares.
  */
-BaseFacility::BaseFacility(RuleBaseFacility *rules, Base *base, int x, int y) : _rules(rules), _base(base), _x(x), _y(y), _buildTime(0)
+BaseFacility::BaseFacility(RuleBaseFacility *rules, Base *base) : _rules(rules), _base(base), _x(-1), _y(-1), _buildTime(0), _craftForDrawing(0)
 {
 }
 
@@ -50,30 +45,31 @@ BaseFacility::~BaseFacility()
  */
 void BaseFacility::load(const YAML::Node &node)
 {
-	node["x"] >> _x;
-	node["y"] >> _y;
-	node["buildTime"] >> _buildTime;
+	_x = node["x"].as<int>(_x);
+	_y = node["y"].as<int>(_y);
+	_buildTime = node["buildTime"].as<int>(_buildTime);
 }
 
 /**
  * Saves the base facility to a YAML file.
- * @param out YAML emitter.
+ * @return YAML node.
  */
-void BaseFacility::save(YAML::Emitter &out) const
+YAML::Node BaseFacility::save() const
 {
-	out << YAML::BeginMap;
-	out << YAML::Key << "type" << YAML::Value << _rules->getType();
-	out << YAML::Key << "x" << YAML::Value << _x;
-	out << YAML::Key << "y" << YAML::Value << _y;
-	out << YAML::Key << "buildTime" << YAML::Value << _buildTime;
-	out << YAML::EndMap;
+	YAML::Node node;
+	node["type"] = _rules->getType();
+	node["x"] = _x;
+	node["y"] = _y;
+	if (_buildTime != 0)
+		node["buildTime"] = _buildTime;
+	return node;
 }
 
 /**
  * Returns the ruleset for the base facility's type.
  * @return Pointer to ruleset.
  */
-RuleBaseFacility *const BaseFacility::getRules() const
+RuleBaseFacility *BaseFacility::getRules() const
 {
 	return _rules;
 }
@@ -89,6 +85,16 @@ int BaseFacility::getX() const
 }
 
 /**
+ * Changes the base facility's X position on the
+ * base grid that it's placed on.
+ * @param x X position in grid squares.
+ */
+void BaseFacility::setX(int x)
+{
+	_x = x;
+}
+
+/**
  * Returns the base facility's Y position on the
  * base grid that it's placed on.
  * @return Y position in grid squares.
@@ -96,6 +102,16 @@ int BaseFacility::getX() const
 int BaseFacility::getY() const
 {
 	return _y;
+}
+
+/**
+ * Changes the base facility's Y position on the
+ * base grid that it's placed on.
+ * @param y Y position in grid squares.
+ */
+void BaseFacility::setY(int y)
+{
+	_y = y;
 }
 
 /**
@@ -127,28 +143,6 @@ void BaseFacility::build()
 }
 
 /**
- * Returns if a certain target is covered by the facility's
- * radar range, taking in account the positions of both.
- * @param target Pointer to target to compare.
- * @return True if it's within range, False otherwise.
- */
-bool BaseFacility::insideRadarRange(Target *target) const
-{
-	if (_rules->getRadarRange() == 0)
-		return false;
-
-	bool inside = false;
-	double newrange = _rules->getRadarRange() * (1 / 60.0) * (M_PI / 180);
-	for (double lon = target->getLongitude() - 2*M_PI; lon <= target->getLongitude() + 2*M_PI; lon += 2*M_PI)
-	{
-		double dLon = lon - _base->getLongitude();
-		double dLat = target->getLatitude() - _base->getLatitude();
-		inside = inside || (dLon * dLon + dLat * dLat <= newrange * newrange);
-	}
-    return inside;
-}
-
-/**
  * Returns if this facility is currently being
  * used by its base.
  * @return True if it's under use, False otherwise.
@@ -159,11 +153,31 @@ bool BaseFacility::inUse() const
 	{
 		return false;
 	}
-	return (_base->getAvailableQuarters() - _rules->getPersonnel() < _base->getUsedQuarters() ||
-			_base->getAvailableStores() - _rules->getStorage() < _base->getUsedStores() ||
-			_base->getAvailableLaboratories() - _rules->getLaboratories() < _base->getUsedLaboratories() ||
-			_base->getAvailableWorkshops() - _rules->getWorkshops() < _base->getUsedWorkshops() ||
-			_base->getAvailableHangars() - _rules->getCrafts() < _base->getUsedHangars());
+	return ((_rules->getPersonnel() > 0 && _base->getAvailableQuarters() - _rules->getPersonnel() < _base->getUsedQuarters()) ||
+			(_rules->getStorage() > 0 && _base->getAvailableStores() - _rules->getStorage() < _base->getUsedStores()) ||
+			(_rules->getLaboratories() > 0 && _base->getAvailableLaboratories() - _rules->getLaboratories() < _base->getUsedLaboratories()) ||
+			(_rules->getWorkshops() > 0 && _base->getAvailableWorkshops() - _rules->getWorkshops() < _base->getUsedWorkshops()) ||
+			(_rules->getCrafts() > 0 && _base->getAvailableHangars() - _rules->getCrafts() < _base->getUsedHangars()) ||
+			(_rules->getPsiLaboratories() > 0 && _base->getAvailablePsiLabs() - _rules->getPsiLaboratories() < _base->getUsedPsiLabs()) ||
+			(_rules->getAliens() > 0 && _base->getAvailableContainment() - _rules->getAliens() < _base->getUsedContainment()));
+}
+
+/**
+ * Gets craft, used for drawing facility.
+ * @return craft
+ */
+Craft *BaseFacility::getCraft() const
+{
+	return _craftForDrawing;
+}
+
+/**
+ * Sets craft, used for drawing facility.
+ * @param craft for drawing hangar.
+ */
+void BaseFacility::setCraft(Craft *craft)
+{
+	_craftForDrawing = craft;
 }
 
 }

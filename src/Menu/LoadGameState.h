@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,43 +17,40 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM__LOADGAMESTATE_H
-#define OPENXCOM__LOADGAMESTATE_H
-
 #include "../Engine/State.h"
+#include <SDL.h>
+#include <string>
+#include "OptionsBaseState.h"
+#include "../Savegame/SavedGame.h"
 
 namespace OpenXcom
 {
 
-class TextButton;
-class Window;
 class Text;
-class TextList;
 
 /**
- * Load Game screen for listing info on available
- * saved games and loading them.
+ * Loads a saved game, with an optional message.
  */
 class LoadGameState : public State
 {
 private:
-	TextButton *_btnCancel;
-	Window *_window;
-	Text *_txtTitle, *_txtName, *_txtTime, *_txtDate;
-	TextList *_lstSaves;
+	int _firstRun;
+	OptionsOrigin _origin;
+	Text *_txtStatus;
+	std::string _filename;
 public:
 	/// Creates the Load Game state.
-	LoadGameState(Game *game);
+	LoadGameState(OptionsOrigin origin, const std::string &filename, SDL_Color *palette);
+	/// Creates the Load Game state.
+	LoadGameState(OptionsOrigin origin, SaveType type, SDL_Color *palette);
 	/// Cleans up the Load Game state.
 	~LoadGameState();
-	/// Updates the palette.
+	/// Creates the interface.
+	void buildUi(SDL_Color *palette);
+	/// Validates game.
 	void init();
-	/// Handler for clicking the Cancel button.
-	void btnCancelClick(Action *action);
-	/// Handler for clicking the Saves list.
-	void lstSavesClick(Action *action);
+	/// Loads the game.
+	void think();
 };
 
 }
-
-#endif

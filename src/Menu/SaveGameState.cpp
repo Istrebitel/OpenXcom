@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,23 +17,20 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "SaveGameState.h"
-#include <iostream>
-#include "yaml.h"
-#include "../Savegame/SavedGame.h"
+#include <sstream>
+#include "../Engine/Logger.h"
 #include "../Engine/Game.h"
-#include "../Engine/Action.h"
 #include "../Engine/Exception.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
 #include "../Engine/Options.h"
-#include "../Interface/TextButton.h"
-#include "../Interface/Window.h"
+#include "../Engine/Screen.h"
+#include "../Engine/CrossPlatform.h"
+#include "../Engine/Language.h"
 #include "../Interface/Text.h"
-#include "../Interface/TextList.h"
-#include "../Interface/TextEdit.h"
-#include "../Geoscape/GeoscapeErrorState.h"
+#include "ErrorMessageState.h"
+#include "MainMenuState.h"
+#include "../Savegame/SavedGame.h"
+#include "../Mod/Mod.h"
+#include "../Mod/RuleInterface.h"
 
 namespace OpenXcom
 {
@@ -41,66 +38,44 @@ namespace OpenXcom
 /**
  * Initializes all the elements in the Save Game screen.
  * @param game Pointer to the core game.
+ * @param origin Game section that originated this state.
+ * @param filename Name of the save file without extension.
+ * @param palette Parent state palette.
  */
-SaveGameState::SaveGameState(Game *game) : State(game), _selected("")
+SaveGameState::SaveGameState(OptionsOrigin origin, const std::string &filename, SDL_Color *palette) : _firstRun(0), _origin(origin), _filename(filename), _type(SAVE_DEFAULT)
 {
-	// Create objects
-	_window = new Window(this, 320, 200, 0, 0, POPUP_BOTH);
-	_btnCancel = new TextButton(80, 16, 120, 172);
-	_txtTitle = new Text(310, 16, 5, 8);
-	_txtName = new Text(150, 9, 16, 24);
-	_txtTime = new Text(30, 9, 184, 24);
-	_txtDate = new Text(30, 9, 214, 24);
-	_lstSaves = new TextList(288, 128, 8, 32);
-	_edtSave = new TextEdit(168, 9, 0, 0);
-	
-	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(6)), Palette::backPos, 16);
+	buildUi(palette);
+}
 
-	add(_window);
-	add(_btnCancel);
-	add(_txtTitle);
-	add(_txtName);
-	add(_txtTime);
-	add(_txtDate);
-	add(_lstSaves);
-	add(_edtSave);
+/**
+ * Initializes all the elements in the Save Game screen.
+ * @param game Pointer to the core game.
+ * @param origin Game section that originated this state.
+ * @param type Type of auto-save being used.
+ * @param palette Parent state palette.
+ */
+SaveGameState::SaveGameState(OptionsOrigin origin, SaveType type, SDL_Color *palette) : _firstRun(0), _origin(origin), _type(type)
+{
+	switch (type)
+	{
+	case SAVE_QUICK:
+		_filename = SavedGame::QUICKSAVE;
+		break;
+	case SAVE_AUTO_GEOSCAPE:
+		_filename = SavedGame::AUTOSAVE_GEOSCAPE;
+		break;
+	case SAVE_AUTO_BATTLESCAPE:
+		_filename = SavedGame::AUTOSAVE_BATTLESCAPE;
+		break;
+	case SAVE_IRONMAN:
+	case SAVE_IRONMAN_END:
+		_filename = CrossPlatform::sanitizeFilename(Language::wstrToFs(_game->getSavedGame()->getName())) + ".sav";
+		break;
+	default:
+		break;
+	}
 
-	// Set up objects
-	_window->setColor(Palette::blockOffset(8)+8);
-	_window->setBackground(game->getResourcePack()->getSurface("BACK01.SCR"));
-
-	_btnCancel->setColor(Palette::blockOffset(8)+8);
-	_btnCancel->setText(_game->getLanguage()->getString("STR_CANCEL_UC"));
-	_btnCancel->onMouseClick((ActionHandler)&SaveGameState::btnCancelClick);
-
-	_txtTitle->setColor(Palette::blockOffset(15)-1);
-	_txtTitle->setBig();
-	_txtTitle->setAlign(ALIGN_CENTER);
-	_txtTitle->setText(_game->getLanguage()->getString("STR_SELECT_SAVE_POSITION"));
-
-	_txtName->setColor(Palette::blockOffset(15)-1);
-	_txtName->setText(_game->getLanguage()->getString("STR_NAME"));
-
-	_txtTime->setColor(Palette::blockOffset(15)-1);
-	_txtTime->setText(_game->getLanguage()->getString("STR_TIME"));
-
-	_txtDate->setColor(Palette::blockOffset(15)-1);
-	_txtDate->setText(_game->getLanguage()->getString("STR_DATE"));
-	
-	_lstSaves->setColor(Palette::blockOffset(8)+10);
-	_lstSaves->setArrowColor(Palette::blockOffset(8)+8);
-	_lstSaves->setColumns(5, 168, 30, 30, 30, 30);
-	_lstSaves->setSelectable(true);
-	_lstSaves->setBackground(_window);
-	_lstSaves->setMargin(8);
-	_lstSaves->onMouseClick((ActionHandler)&SaveGameState::lstSavesClick);
-	_lstSaves->addRow(1, L"<NEW SAVED GAME>");
-	SavedGame::getList(_lstSaves, _game->getLanguage());
-
-	_edtSave->setColor(Palette::blockOffset(8)+10);
-	_edtSave->setVisible(false);
-	_edtSave->onKeyboardPress((ActionHandler)&SaveGameState::edtSaveKeyPress);
+	buildUi(palette);
 }
 
 /**
@@ -108,83 +83,118 @@ SaveGameState::SaveGameState(Game *game) : State(game), _selected("")
  */
 SaveGameState::~SaveGameState()
 {
-	
+
 }
 
 /**
- * Resets the palette since it's bound to change on other screens.
+ * Builds the interface.
+ * @param palette Parent state palette.
  */
-void SaveGameState::init()
+void SaveGameState::buildUi(SDL_Color *palette)
 {
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(6)), Palette::backPos, 16);
-}
+	_screen = false;
 
-/**
- * Returns to the previous screen.
- * @param action Pointer to an action.
- */
-void SaveGameState::btnCancelClick(Action *action)
-{
-	_game->popState();
-}
+	// Create objects
+	_txtStatus = new Text(320, 17, 0, 92);
 
-/**
- * Names the selected save.
- * @param action Pointer to an action.
- */
-void SaveGameState::lstSavesClick(Action *action)
-{
-	Text *t = _lstSaves->getCell(_lstSaves->getSelectedRow(), 0);
-	_selected = Language::wstrToUtf8(t->getText());
-	t->setText(L"");
-	_lstSaves->draw();
-	if (_lstSaves->getSelectedRow() == 0)
+	// Set palette
+	setPalette(palette);
+
+	if (_origin == OPT_BATTLESCAPE)
 	{
-		_edtSave->setText(L"");
-		_selected = "";
+		add(_txtStatus, "textLoad", "battlescape");
+		_txtStatus->setHighContrast(true);
 	}
 	else
 	{
-		_edtSave->setText(Language::utf8ToWstr(_selected));
+		add(_txtStatus, "textLoad", "geoscape");
 	}
-	_edtSave->setX(_lstSaves->getX() + t->getX());
-	_edtSave->setY(_lstSaves->getY() + t->getY());
-	_edtSave->setVisible(true);
-	_edtSave->focus();
+
+	centerAllSurfaces();
+
+	// Set up objects
+	_txtStatus->setBig();
+	_txtStatus->setAlign(ALIGN_CENTER);
+	_txtStatus->setText(tr("STR_SAVING_GAME"));
+
 }
 
 /**
- * Saves the selected save.
- * @param action Pointer to an action.
+ * Saves the current save.
  */
-void SaveGameState::edtSaveKeyPress(Action *action)
+void SaveGameState::think()
 {
-	if (action->getDetails()->key.keysym.sym == SDLK_RETURN)
+	State::think();
+	// Make sure it gets drawn properly
+	if (_firstRun < 10)
 	{
+		_firstRun++;
+	}
+	else
+	{
+		_game->popState();
+
+		switch (_type)
+		{
+		case SAVE_DEFAULT:
+			// manual save, close the save screen
+			_game->popState();
+			if (!_game->getSavedGame()->isIronman())
+			{
+				// and pause screen too
+				_game->popState();
+			}
+			break;
+		case SAVE_QUICK:
+		case SAVE_AUTO_GEOSCAPE:
+		case SAVE_AUTO_BATTLESCAPE:
+			// automatic save, give it a default name
+			_game->getSavedGame()->setName(Language::fsToWstr(_filename));
+		default:
+			break;
+		}
+
+		// Save the game
 		try
 		{
-			if (_selected != "")
+			std::string backup = _filename + ".bak";
+			_game->getSavedGame()->save(backup);
+			std::string fullPath = Options::getMasterUserFolder() + _filename;
+			std::string bakPath = Options::getMasterUserFolder() + backup;
+			if (!CrossPlatform::moveFile(bakPath, fullPath))
 			{
-				std::string oldName = Options::getUserFolder() + _selected + ".sav";
-				std::string newName = Options::getUserFolder() + Language::wstrToUtf8(_edtSave->getText()) + ".sav";
-				if (rename(oldName.c_str(), newName.c_str()) != 0)
-				{
-					throw Exception("Failed to overwrite save");
-				}
+				throw Exception("Save backed up in " + backup);
 			}
-			_game->getSavedGame()->save(Language::wstrToUtf8(_edtSave->getText()));
+
+			if (_type == SAVE_IRONMAN_END)
+			{
+				Screen::updateScale(Options::geoscapeScale, Options::geoscapeScale, Options::baseXGeoscape, Options::baseYGeoscape, true);
+				_game->getScreen()->resetDisplay(false);
+
+				_game->setState(new MainMenuState);
+				_game->setSavedGame(0);
+			}
 		}
 		catch (Exception &e)
 		{
-			std::cerr << "ERROR: " << e.what() << std::endl;
-			_game->pushState(new GeoscapeErrorState(_game, "STR_SAVE_UNSUCCESSFUL"));
+			Log(LOG_ERROR) << e.what();
+			std::wostringstream error;
+			error << tr("STR_SAVE_UNSUCCESSFUL") << L'\x02' << Language::fsToWstr(e.what());
+			if (_origin != OPT_BATTLESCAPE)
+				_game->pushState(new ErrorMessageState(error.str(), _palette, _game->getMod()->getInterface("errorMessages")->getElement("geoscapeColor")->color, "BACK01.SCR", _game->getMod()->getInterface("errorMessages")->getElement("geoscapePalette")->color));
+			else
+				_game->pushState(new ErrorMessageState(error.str(), _palette, _game->getMod()->getInterface("errorMessages")->getElement("battlescapeColor")->color, "TAC00.SCR", _game->getMod()->getInterface("errorMessages")->getElement("battlescapePalette")->color));
 		}
 		catch (YAML::Exception &e)
 		{
-			std::cerr << "ERROR: " << e.what() << std::endl;
-			_game->pushState(new GeoscapeErrorState(_game, "STR_SAVE_UNSUCCESSFUL"));
+			Log(LOG_ERROR) << e.what();
+			std::wostringstream error;
+			error << tr("STR_SAVE_UNSUCCESSFUL") << L'\x02' << Language::fsToWstr(e.what());
+			if (_origin != OPT_BATTLESCAPE)
+				_game->pushState(new ErrorMessageState(error.str(), _palette, _game->getMod()->getInterface("errorMessages")->getElement("geoscapeColor")->color, "BACK01.SCR", _game->getMod()->getInterface("errorMessages")->getElement("geoscapePalette")->color));
+			else
+				_game->pushState(new ErrorMessageState(error.str(), _palette, _game->getMod()->getInterface("errorMessages")->getElement("battlescapeColor")->color, "TAC00.SCR", _game->getMod()->getInterface("errorMessages")->getElement("battlescapePalette")->color));
 		}
-		_game->popState();
 	}
 }
 

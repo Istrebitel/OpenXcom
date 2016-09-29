@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,51 +17,70 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_FONT_H
-#define OPENXCOM_FONT_H
-
 #include <map>
-#include "SDL.h"
+#include <vector>
+#include <utility>
+#include <string>
+#include <SDL.h>
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
 
 class Surface;
+class Palette;
+
+struct FontImage
+{
+	int width, height, spacing;
+	Surface *surface;
+};
 
 /**
  * Takes care of loading and storing each character in a sprite font.
- * Sprite fonts consist of a set of fixed-size characters all lined up
- * in one column in a surface.
+ * Sprite fonts consist of a set of characters split in fixed-size regions.
  * @note The characters don't all need to be the same size, they can
  * have blank space and will be automatically lined up properly.
  */
 class Font
 {
 private:
-	Surface *_surface;
-	int _width, _height, _nchar;
-	std::map<wchar_t, SDL_Rect> _chars;
-	// For some reason the X-Com small font is smooshed together by one pixel...
-	int _spacing;
+	std::vector<FontImage> _images;
+	std::map< wchar_t, std::pair<size_t, SDL_Rect> > _chars;
+	bool _monospace;
+	/// Determines the size and position of each character in the font.
+	void init(size_t index, const std::wstring &str);
 public:
-	/// Creates a font with a blank surface.
-	Font(int width, int height, int nchar, int spacing = 0);
+	/// Creates a blank font.
+	Font();
 	/// Cleans up the font.
 	~Font();
-	/// Determines the size and position of each character in the font.
-	void load();
+	/// Checks if a character is a linebreak.
+	static inline bool isLinebreak(wchar_t c) { return (c == L'\n' || c == L'\x02'); }
+	/// Checks if a character is a blank space (includes non-breaking spaces).
+	static inline bool isSpace(wchar_t c) { return (c == L' ' || c == L'\xA0'); }
+	/// Checks if a character is a word separator.
+	static inline bool isSeparator(wchar_t c) { return (c == L'-' || c == '/'); }
+	/// Checks if a character is a non-breaking space.
+	static inline bool isNonBreakableSpace(wchar_t c) { return (c == L'\xA0'); }
+	/// Loads the font from YAML.
+	void load(const YAML::Node& node);
+	/// Generate the terminal font.
+	void loadTerminal();
 	/// Gets a particular character from the font, with its real size.
-	Surface *const getChar(wchar_t c);
+	Surface *getChar(wchar_t c);
 	/// Gets the font's character width.
 	int getWidth() const;
 	/// Gets the font's character height.
 	int getHeight() const;
-	/// Gets the horizontal spacing between characters.
+	/// Gets the spacing between characters.
 	int getSpacing() const;
-	/// Gets the font's surface.
-	Surface *const getSurface() const;
+	/// Gets the size of a particular character;
+	SDL_Rect getCharSize(wchar_t c);
+	/// Gets the font's palette.
+	SDL_Color *getPalette() const;
+	/// Sets the font's palette.
+	void setPalette(SDL_Color *colors, int firstcolor, int ncolors);
 };
 
 }
-
-#endif

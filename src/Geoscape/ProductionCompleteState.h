@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,11 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_PRODUCTIONCOMPLETESTATE_H
-#define OPENXCOM_PRODUCTIONCOMPLETESTATE_H
-
 #include <string>
 #include "../Engine/State.h"
+#include "../Savegame/Production.h"
 
 namespace OpenXcom
 {
@@ -28,6 +27,8 @@ namespace OpenXcom
 class TextButton;
 class Window;
 class Text;
+class Base;
+class GeoscapeState;
 
 /**
  * Window used to notify the player when
@@ -36,20 +37,22 @@ class Text;
 class ProductionCompleteState : public State
 {
 private:
-	TextButton *_btnOk;
+	Base *_base;
+	GeoscapeState *_state;
+
+	TextButton *_btnOk, *_btnGotoBase;
 	Window *_window;
 	Text *_txtMessage;
+	productionProgress_e _endType;
 public:
 	/// Creates the Production Complete state.
-	ProductionCompleteState(Game *game, const std::wstring &item, const std::wstring &base);
+	ProductionCompleteState(Base *base, const std::wstring &item, GeoscapeState *state, productionProgress_e endType = PROGRESS_COMPLETE);
 	/// Cleans up the Production Complete state.
 	~ProductionCompleteState();
-	/// Updates the palette.
-	void init();
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
+	/// Handler for clicking the Go To Base button.
+	void btnGotoBaseClick(Action *action);
 };
 
 }
-
-#endif

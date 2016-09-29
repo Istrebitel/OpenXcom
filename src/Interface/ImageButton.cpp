@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,6 +17,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ImageButton.h"
+#include "../Engine/Action.h"
 
 namespace OpenXcom
 {
@@ -28,9 +29,8 @@ namespace OpenXcom
  * @param x X position in pixels.
  * @param y Y position in pixels.
  */
-ImageButton::ImageButton(int width, int height, int x, int y) : InteractiveSurface(width, height, x, y), _color(0), _group(0)
+ImageButton::ImageButton(int width, int height, int x, int y) : InteractiveSurface(width, height, x, y), _color(0), _group(0), _inverted(false)
 {
-	_validButton = SDL_BUTTON_LEFT;
 }
 
 /**
@@ -38,7 +38,7 @@ ImageButton::ImageButton(int width, int height, int x, int y) : InteractiveSurfa
  */
 ImageButton::~ImageButton()
 {
-	
+
 }
 
 /**
@@ -68,7 +68,7 @@ void ImageButton::setGroup(ImageButton **group)
 {
 	_group = group;
 	if (_group != 0 && *_group == this)
-		invert(_color);
+		invert(_color + 3);
 }
 
 /**
@@ -81,10 +81,18 @@ void ImageButton::mousePress(Action *action, State *state)
 {
 	if (_group != 0)
 	{
-		(*_group)->invert((*_group)->getColor());
-		*_group = this;
+		if (action->getDetails()->button.button == SDL_BUTTON_LEFT)
+		{
+			(*_group)->invert((*_group)->getColor() + 3);
+			*_group = this;
+			invert(_color + 3);
+		}
 	}
-	invert(_color);
+	else if (!_inverted && isButtonPressed() && isButtonHandled(action->getDetails()->button.button))
+	{
+		_inverted = true;
+		invert(_color + 3);
+	}
 	InteractiveSurface::mousePress(action, state);
 }
 
@@ -95,9 +103,25 @@ void ImageButton::mousePress(Action *action, State *state)
  */
 void ImageButton::mouseRelease(Action *action, State *state)
 {
-	if (_group == 0)
-		invert(_color);
+	if (_inverted && isButtonHandled(action->getDetails()->button.button))
+	{
+		_inverted = false;
+		invert(_color + 3);
+	}
 	InteractiveSurface::mouseRelease(action, state);
+}
+
+/**
+ * Invert a button explicitly either ON or OFF and keep track of the state using our internal variables.
+ * @param press Set this button as pressed.
+ */
+void ImageButton::toggle(bool press)
+{
+	if (_inverted != press)
+	{
+		_inverted = !_inverted;
+		invert(_color + 3);
+	}
 }
 
 }

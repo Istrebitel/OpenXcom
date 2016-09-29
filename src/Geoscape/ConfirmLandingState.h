@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http:///www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_CONFIRMLANDINGSTATE_H
-#define OPENXCOM_CONFIRMLANDINGSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -28,6 +26,7 @@ class Window;
 class Text;
 class TextButton;
 class Craft;
+class Texture;
 
 /**
  * Window that allows the player
@@ -38,14 +37,17 @@ class ConfirmLandingState : public State
 private:
 	Craft *_craft;
 	Window *_window;
-	int _texture, _shade;
-	Text *_txtCraft, *_txtTarget, *_txtReady, *_txtBegin;
+	Texture *_texture;
+	int _shade;
+	Text *_txtMessage, *_txtBegin;
 	TextButton *_btnYes, *_btnNo;
 public:
 	/// Creates the Confirm Landing state.
-	ConfirmLandingState(Game *game, Craft *craft, int texture, int shade);
+	ConfirmLandingState(Craft *craft, Texture *texture, int shade);
 	/// Cleans up the Confirm Landing state.
 	~ConfirmLandingState();
+	/// initialize the state, make a sanity check.
+	void init();
 	/// Handler for clicking the Yes button.
 	void btnYesClick(Action *action);
 	/// Handler for clicking the No button.
@@ -53,5 +55,3 @@ public:
 };
 
 }
-
-#endif

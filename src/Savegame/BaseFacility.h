@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,18 +17,15 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_BASEFACILITY_H
-#define OPENXCOM_BASEFACILITY_H
-
-#include "yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
 
 class RuleBaseFacility;
 class Base;
-class Target;
-class Ruleset;
+class Mod;
+class Craft;
 
 /**
  * Represents a base facility placed in a base.
@@ -41,33 +39,38 @@ private:
 	RuleBaseFacility *_rules;
 	Base *_base;
 	int _x, _y, _buildTime;
+	Craft *_craftForDrawing;	// craft, used for drawing facility
 public:
 	/// Creates a base facility of the specified type.
-	BaseFacility(RuleBaseFacility *rules, Base *base, int x, int y);
+	BaseFacility(RuleBaseFacility *rules, Base *base);
 	/// Cleans up the base facility.
 	~BaseFacility();
 	/// Loads the base facility from YAML.
 	void load(const YAML::Node& node);
 	/// Saves the base facility to YAML.
-	void save(YAML::Emitter& out) const;
+	YAML::Node save() const;
 	/// Gets the facility's ruleset.
-	RuleBaseFacility *const getRules() const;
+	RuleBaseFacility *getRules() const;
 	/// Gets the facility's X position.
 	int getX() const;
+	/// Sets the facility's X position.
+	void setX(int x);
 	/// Gets the facility's Y position.
 	int getY() const;
+	/// Sets the facility's Y position.
+	void setY(int y);
 	/// Gets the facility's construction time.
 	int getBuildTime() const;
 	/// Sets the facility's construction time.
 	void setBuildTime(int time);
 	/// Builds up the facility.
 	void build();
-	/// Checks if a target is inside the facility's radar.
-	bool insideRadarRange(Target *target) const;
 	/// Checks if the facility is currently in use.
 	bool inUse() const;
+	/// Gets craft, used for drawing facility.
+	Craft *getCraft() const;
+	/// Sets craft, used for drawing facility.
+	void setCraft(Craft *craft);
 };
 
 }
-
-#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,7 +17,6 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Waypoint.h"
-#include <sstream>
 #include "../Engine/Language.h"
 
 namespace OpenXcom
@@ -44,30 +43,30 @@ Waypoint::~Waypoint()
 void Waypoint::load(const YAML::Node &node)
 {
 	Target::load(node);
-	node["id"] >> _id;
+	_id = node["id"].as<int>(_id);
 }
 
 /**
  * Saves the waypoint to a YAML file.
- * @param out YAML emitter.
+ * @return YAML node.
  */
-void Waypoint::save(YAML::Emitter &out) const
+YAML::Node Waypoint::save() const
 {
-	Target::save(out);
-	out << YAML::Key << "id" << YAML::Value << _id;
-	out << YAML::EndMap;
+	YAML::Node node = Target::save();
+	node["id"] = _id;
+	return node;
 }
 
 /**
  * Saves the waypoint's unique identifiers to a YAML file.
- * @param out YAML emitter.
+ * @return YAML node.
  */
-void Waypoint::saveId(YAML::Emitter &out) const
+YAML::Node Waypoint::saveId() const
 {
-	Target::saveId(out);
-	out << YAML::Key << "type" << YAML::Value << "STR_WAYPOINT";
-	out << YAML::Key << "id" << YAML::Value << _id;
-	out << YAML::EndMap;
+	YAML::Node node = Target::saveId();
+	node["type"] = "STR_WAYPOINT";
+	node["id"] = _id;
+	return node;
 }
 
 /**
@@ -89,15 +88,22 @@ void Waypoint::setId(int id)
 }
 
 /**
- * Returns the waypoint's unique identifying name.
+ * Returns the waypoint's unique default name.
  * @param lang Language to get strings from.
  * @return Full name.
  */
-std::wstring Waypoint::getName(Language *lang) const
+std::wstring Waypoint::getDefaultName(Language *lang) const
 {
-	std::wstringstream name;
-	name << lang->getString("STR_WAY_POINT_") << _id;
-	return name.str();
+	return lang->getString("STR_WAY_POINT_").arg(_id);
+}
+
+/**
+ * Returns the globe marker for the waypoint.
+ * @return Marker sprite, -1 if none.
+ */
+int Waypoint::getMarker() const
+{
+	return 6;
 }
 
 }

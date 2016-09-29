@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_CRAFTARMORSTATE_H
-#define OPENXCOM_CRAFTARMORSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -43,12 +41,14 @@ private:
 	TextList *_lstSoldiers;
 
 	Base *_base;
-	unsigned int _craft;
+	size_t _craft;
 public:
 	/// Creates the Craft Armor state.
-	CraftArmorState(Game *game, Base *base, unsigned int craft);
+	CraftArmorState(Base *base, size_t craft);
 	/// Cleans up the Craft Armor state.
 	~CraftArmorState();
+	/// Updates the soldier armors.
+	void init();
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
 	/// Handler for clicking the Soldiers list.
@@ -56,5 +56,3 @@ public:
 };
 
 }
-
-#endif

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_MOVINGTARGET_H
-#define OPENXCOM_MOVINGTARGET_H
-
 #include "Target.h"
 
 namespace OpenXcom
@@ -31,39 +29,44 @@ namespace OpenXcom
 class MovingTarget : public Target
 {
 protected:
+	static const double GLOBE_RADIUS;
+
 	Target *_dest;
-	double _speedLon, _speedLat;
+	double _speedLon, _speedLat, _speedRadian;
+	double _meetPointLon, _meetPointLat;
 	int _speed;
-	
-	/// Has the moving target finished its route?
-	bool finishedRoute() const;
+
 	/// Calculates a new speed vector to the destination.
 	virtual void calculateSpeed();
-public:
 	/// Creates a moving target.
 	MovingTarget();
+public:
 	/// Cleans up the moving target.
 	virtual ~MovingTarget();
 	/// Loads the moving target from YAML.
 	virtual void load(const YAML::Node& node);
 	/// Saves the moving target to YAML.
-	virtual void save(YAML::Emitter& out) const;
+	virtual YAML::Node save() const;
 	/// Gets the moving target's destination.
-	Target *const getDestination() const;
+	Target *getDestination() const;
 	/// Sets the moving target's destination.
 	virtual void setDestination(Target *dest);
 	/// Gets the moving target's speed.
 	int getSpeed() const;
+	/// Gets the moving target's radial speed.
+	double getSpeedRadian() const;
 	/// Sets the moving target's speed.
 	void setSpeed(int speed);
-	/// Gets the moving target's speed in radian.
-	double getRadianSpeed() const;
-	/// Gets the distance to another target.
-	double getDistance(Target *target, double *dLon, double *dLat) const;
 	/// Has the moving target reached its destination?
 	bool reachedDestination() const;
+	/// Move towards the destination.
+	void move();
+	/// Calculate meeting point with the target.
+	void calculateMeetPoint();
+	/// Returns the latitude of the meeting point
+	double getMeetLatitude() const;
+	/// Returns the longitude of the meeting point
+	double getMeetLongitude() const;
 };
 
 }
-
-#endif

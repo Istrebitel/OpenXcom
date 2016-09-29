@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,103 +18,73 @@
  */
 
 #include <sstream>
-
-#include "Ufopaedia.h"
 #include "ArticleStateCraft.h"
-#include "../Ruleset/ArticleDefinition.h"
-#include "../Ruleset/RuleCraft.h"
+#include "../Mod/ArticleDefinition.h"
+#include "../Mod/Mod.h"
+#include "../Mod/RuleCraft.h"
 #include "../Engine/Game.h"
 #include "../Engine/Palette.h"
 #include "../Engine/Surface.h"
-#include "../Engine/Language.h"
-#include "../Resource/ResourcePack.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
-#include "../Interface/TextList.h"
 
 namespace OpenXcom
 {
-	
-	ArticleStateCraft::ArticleStateCraft(Game *game, ArticleDefinitionCraft *defs) : ArticleState(game, defs->id)
+
+	ArticleStateCraft::ArticleStateCraft(ArticleDefinitionCraft *defs) : ArticleState(defs->id)
 	{
+		RuleCraft *craft = _game->getMod()->getCraft(defs->id);
+
 		// add screen elements
-		_txtTitle = new Text(140, 32, 5, 24);
-		
+		_txtTitle = new Text(210, 32, 5, 24);
+
 		// Set palette
-		_game->setPalette(_game->getResourcePack()->getPalette("PALETTES.DAT_3")->getColors());
-		
+		setPalette("PAL_UFOPAEDIA");
+
 		ArticleState::initLayout();
-		
+
 		// add other elements
 		add(_txtTitle);
-		
+
 		// Set up objects
-		_game->getResourcePack()->getSurface(defs->image_id)->blit(_bg);
-		_btnOk->setColor(Palette::blockOffset(15)+2);
-		_btnPrev->setColor(Palette::blockOffset(15)+2);
-		_btnNext->setColor(Palette::blockOffset(15)+2);
-		
+		_game->getMod()->getSurface(defs->image_id)->blit(_bg);
+		_btnOk->setColor(Palette::blockOffset(15)-1);
+		_btnPrev->setColor(Palette::blockOffset(15)-1);
+		_btnNext->setColor(Palette::blockOffset(15)-1);
+
 		_txtTitle->setColor(Palette::blockOffset(14)+15);
 		_txtTitle->setBig();
-		_txtTitle->setAlign(ALIGN_LEFT);
 		_txtTitle->setWordWrap(true);
-		_txtTitle->setText(Ufopaedia::buildText(_game, defs->title));
+		_txtTitle->setText(tr(defs->title));
 
 		_txtInfo = new Text(defs->rect_text.width, defs->rect_text.height, defs->rect_text.x, defs->rect_text.y);
 		add(_txtInfo);
-		
+
 		_txtInfo->setColor(Palette::blockOffset(14)+15);
-		_txtInfo->setAlign(ALIGN_LEFT);
 		_txtInfo->setWordWrap(true);
-		_txtInfo->setText(Ufopaedia::buildText(_game, defs->text));
+		_txtInfo->setText(tr(defs->text));
 
-		_lstInfo = new TextList(defs->rect_stats.width, defs->rect_stats.height, defs->rect_stats.x, defs->rect_stats.y);
-		add(_lstInfo);
-		
-		_lstInfo->setColor(Palette::blockOffset(14)+15);
-		_lstInfo->setColumns(2, 82, 40);
-		_lstInfo->setCondensed(true);
+		_txtStats = new Text(defs->rect_stats.width, defs->rect_stats.height, defs->rect_stats.x, defs->rect_stats.y);
+		add(_txtStats);
 
-		std::wstringstream ss;
-		ss.str(L"");ss.clear();
-		ss << defs->craft->getMaxSpeed();
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_MAXIMUM_SPEED_UC").c_str(), ss.str().c_str());
-		_lstInfo->getCell(0, 1)->setColor(Palette::blockOffset(15)+4);
+		_txtStats->setColor(Palette::blockOffset(14)+15);
+		_txtStats->setSecondaryColor(Palette::blockOffset(15)+4);
 
-		ss.str(L"");ss.clear();
-		ss << defs->craft->getAcceleration();
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_ACCELERATION").c_str(), ss.str().c_str());
-		_lstInfo->getCell(1, 1)->setColor(Palette::blockOffset(15)+4);
-		
-		ss.str(L"");ss.clear();
-		ss << defs->craft->getMaxFuel();
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_FUEL_CAPACITY").c_str(), ss.str().c_str());
-		_lstInfo->getCell(2, 1)->setColor(Palette::blockOffset(15)+4);
+		std::wostringstream ss;
+		ss << tr("STR_MAXIMUM_SPEED_UC").arg(Text::formatNumber(craft->getMaxSpeed())) << L'\n';
+		ss << tr("STR_ACCELERATION").arg(craft->getAcceleration()) << L'\n';
+		ss << tr("STR_FUEL_CAPACITY").arg(Text::formatNumber(craft->getMaxFuel())) << L'\n';
+		ss << tr("STR_WEAPON_PODS").arg(craft->getWeapons()) << L'\n';
+		ss << tr("STR_DAMAGE_CAPACITY_UC").arg(Text::formatNumber(craft->getMaxDamage())) << L'\n';
+		ss << tr("STR_CARGO_SPACE").arg(craft->getSoldiers()) << L'\n';
+		ss << tr("STR_HWP_CAPACITY").arg(craft->getVehicles());
+		_txtStats->setText(ss.str());
 
-		ss.str(L"");ss.clear();
-		ss << defs->craft->getWeapons();
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_WEAPON_PODS").c_str(), ss.str().c_str());
-		_lstInfo->getCell(3, 1)->setColor(Palette::blockOffset(15)+4);
-
-		ss.str(L"");ss.clear();
-		ss << defs->craft->getMaxDamage();
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_DAMAGE_CAPACITY_UC").c_str(), ss.str().c_str());
-		_lstInfo->getCell(4, 1)->setColor(Palette::blockOffset(15)+4);
-		
-		ss.str(L"");ss.clear();
-		ss << defs->craft->getSoldiers();
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_CARGO_SPACE").c_str(), ss.str().c_str());
-		_lstInfo->getCell(5, 1)->setColor(Palette::blockOffset(15)+4);
-		
-		ss.str(L"");ss.clear();
-		ss << defs->craft->getHWPs();
-		_lstInfo->addRow(2, _game->getLanguage()->getString("STR_HWP_CAPACITY").c_str(), ss.str().c_str());
-		_lstInfo->getCell(6, 1)->setColor(Palette::blockOffset(15)+4);
-
-		_lstInfo->draw();
+		centerAllSurfaces();
 	}
-	
+
 	ArticleStateCraft::~ArticleStateCraft()
 	{}
-	
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,7 +18,7 @@
  */
 #include "Cursor.h"
 #include <cmath>
-#include "SDL.h"
+#include <SDL.h>
 #include "../Engine/Action.h"
 
 namespace OpenXcom
@@ -28,7 +28,7 @@ namespace OpenXcom
  * Sets up a cursor with the specified size and position
  * and hides the system cursor.
  * @note The size and position don't really matter since
- * it's a 9x13 shape, they're just there for inhertiance.
+ * it's a 9x13 shape, they're just there for inheritance.
  * @param width Width in pixels.
  * @param height Height in pixels.
  * @param x X position in pixels.
@@ -36,7 +36,6 @@ namespace OpenXcom
  */
 Cursor::Cursor(int width, int height, int x, int y) : Surface(width, height, x, y), _color(0)
 {
-	SDL_ShowCursor(SDL_DISABLE);
 }
 
 /**
@@ -44,7 +43,6 @@ Cursor::Cursor(int width, int height, int x, int y) : Surface(width, height, x, 
  */
 Cursor::~Cursor()
 {
-	
 }
 
 /**
@@ -56,8 +54,8 @@ void Cursor::handle(Action *action)
 {
 	if (action->getDetails()->type == SDL_MOUSEMOTION)
 	{
-		setX((int)floor(action->getDetails()->motion.x / action->getXScale()));
-		setY((int)floor(action->getDetails()->motion.y / action->getYScale()));
+		setX((int)floor((action->getDetails()->motion.x - action->getLeftBlackBand()) / action->getXScale()));
+		setY((int)floor((action->getDetails()->motion.y - action->getTopBlackBand()) / action->getYScale()));
 	}
 }
 
@@ -68,7 +66,7 @@ void Cursor::handle(Action *action)
 void Cursor::setColor(Uint8 color)
 {
 	_color = color;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -85,11 +83,12 @@ Uint8 Cursor::getColor() const
  */
 void Cursor::draw()
 {
+	Surface::draw();
 	Uint8 color = _color;
 	int x1 = 0, y1 = 0, x2 = getWidth() - 1, y2 = getHeight() - 1;
 
 	lock();
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; ++i)
 	{
 		drawLine(x1, y1, x1, y2, color);
 		drawLine(x1, y1, x2, getWidth() - 1, color);

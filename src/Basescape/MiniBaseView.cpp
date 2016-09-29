@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -22,9 +22,7 @@
 #include "../Engine/Action.h"
 #include "../Savegame/Base.h"
 #include "../Savegame/BaseFacility.h"
-#include "../Ruleset/RuleBaseFacility.h"
-#include "../Savegame/Craft.h"
-#include "../Engine/Palette.h"
+#include "../Mod/RuleBaseFacility.h"
 
 namespace OpenXcom
 {
@@ -36,9 +34,8 @@ namespace OpenXcom
  * @param x X position in pixels.
  * @param y Y position in pixels.
  */
-MiniBaseView::MiniBaseView(int width, int height, int x, int y) : InteractiveSurface(width, height, x, y), _bases(), _texture(0), _base(0), _hoverBase(0)
+MiniBaseView::MiniBaseView(int width, int height, int x, int y) : InteractiveSurface(width, height, x, y), _texture(0), _base(0), _hoverBase(0)
 {
-	_validButton = SDL_BUTTON_LEFT;
 }
 
 /**
@@ -55,7 +52,7 @@ MiniBaseView::~MiniBaseView()
 void MiniBaseView::setBases(std::vector<Base*> *bases)
 {
 	_bases = bases;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -72,7 +69,7 @@ void MiniBaseView::setTexture(SurfaceSet *texture)
  * Returns the base the mouse cursor is currently over.
  * @return ID of the base.
  */
-unsigned int MiniBaseView::getHoveredBase() const
+size_t MiniBaseView::getHoveredBase() const
 {
 	return _hoverBase;
 }
@@ -82,10 +79,10 @@ unsigned int MiniBaseView::getHoveredBase() const
  * the mini base view.
  * @param base ID of base.
  */
-void MiniBaseView::setSelectedBase(unsigned int base)
+void MiniBaseView::setSelectedBase(size_t base)
 {
 	_base = base;
-	draw();
+	_redraw = true;
 }
 
 /**
@@ -94,8 +91,8 @@ void MiniBaseView::setSelectedBase(unsigned int base)
  */
 void MiniBaseView::draw()
 {
-	clear();
-	for (unsigned int i = 0; i < MAX_BASES; ++i)
+	Surface::draw();
+	for (size_t i = 0; i < MAX_BASES; ++i)
 	{
 		// Draw base squares
 		if (i == _base)
@@ -105,7 +102,7 @@ void MiniBaseView::draw()
 			r.y = 0;
 			r.w = MINI_SIZE + 2;
 			r.h = MINI_SIZE + 2;
-            drawRect(&r, 1);
+			drawRect(&r, 1);
 		}
 		_texture->getFrame(41)->setX(i * (MINI_SIZE + 2));
 		_texture->getFrame(41)->setY(0);
@@ -118,33 +115,33 @@ void MiniBaseView::draw()
 			lock();
 			for (std::vector<BaseFacility*>::iterator f = _bases->at(i)->getFacilities()->begin(); f != _bases->at(i)->getFacilities()->end(); ++f)
 			{
-				int pal;
+				int color;
 				if ((*f)->getBuildTime() == 0)
-					pal = 3;
+					color = _green;
 				else
-					pal = 2;
+					color = _red;
 
 				r.x = i * (MINI_SIZE + 2) + 2 + (*f)->getX() * 2;
 				r.y = 2 + (*f)->getY() * 2;
 				r.w = (*f)->getRules()->getSize() * 2;
 				r.h = (*f)->getRules()->getSize() * 2;
-                drawRect(&r, Palette::blockOffset(pal)+3);
+				drawRect(&r, color+3);
 				r.x++;
 				r.y++;
 				r.w--;
 				r.h--;
-                drawRect(&r, Palette::blockOffset(pal)+5);
+				drawRect(&r, color+5);
 				r.x--;
 				r.y--;
-                drawRect(&r, Palette::blockOffset(pal)+2);
+				drawRect(&r, color+2);
 				r.x++;
 				r.y++;
 				r.w--;
 				r.h--;
-                drawRect(&r, Palette::blockOffset(pal)+3);
+				drawRect(&r, color+3);
 				r.x--;
 				r.y--;
-				setPixel(r.x, r.y, Palette::blockOffset(pal)+1);
+				setPixel(r.x, r.y, color+1);
 			}
 			unlock();
 		}
@@ -158,10 +155,17 @@ void MiniBaseView::draw()
  */
 void MiniBaseView::mouseOver(Action *action, State *state)
 {
-	double x = action->getXMouse() - getX() * action->getXScale();
-	_hoverBase = (int)floor(x / ((MINI_SIZE + 2) * action->getXScale()));
-
+	_hoverBase = (int)floor(action->getRelativeXMouse() / ((MINI_SIZE + 2) * action->getXScale()));
 	InteractiveSurface::mouseOver(action, state);
+}
+
+void MiniBaseView::setColor(Uint8 color)
+{
+	_green = color;
+}
+void MiniBaseView::setSecondaryColor(Uint8 color)
+{
+	_red = color;
 }
 
 }

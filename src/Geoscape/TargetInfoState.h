@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TARGETINFOSTATE_H
-#define OPENXCOM_TARGETINFOSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -27,7 +25,9 @@ namespace OpenXcom
 class TextButton;
 class Window;
 class Text;
+class TextEdit;
 class Target;
+class Globe;
 
 /**
  * Generic window used to display all the
@@ -37,19 +37,23 @@ class TargetInfoState : public State
 {
 private:
 	Target *_target;
+	Globe *_globe;
 
-	TextButton *_btnOk;
+	TextButton *_btnIntercept, *_btnOk;
 	Window *_window;
-	Text *_txtTitle, *_txtTargetted, *_txtFollowers;
+	TextEdit *_edtTitle;
+	Text *_txtTargetted, *_txtFollowers;
 public:
 	/// Creates the Target Info state.
-	TargetInfoState(Game *game, Target *target);
+	TargetInfoState(Target *target, Globe *globe);
 	/// Cleans up the Target Info state.
 	~TargetInfoState();
+	/// Handler for clicking the Intercept button.
+	void btnInterceptClick(Action *action);
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
+	/// Handler for changing the text on the Name edit.
+	void edtTitleChange(Action *action);
 };
 
 }
-
-#endif

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,16 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_CRAFTWEAPON_H
-#define OPENXCOM_CRAFTWEAPON_H
-
-#include <string>
-#include "yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
 
 class RuleCraftWeapon;
+class CraftWeaponProjectile;
+class Mod;
 
 /**
  * Represents a craft weapon equipped by a craft.
@@ -46,21 +45,24 @@ public:
 	/// Loads the craft weapon from YAML.
 	void load(const YAML::Node& node);
 	/// Saves the craft weapon to YAML.
-	void save(YAML::Emitter& out) const;
+	YAML::Node save() const;
 	/// Gets the craft weapon's ruleset.
-	RuleCraftWeapon *const getRules() const;
+	RuleCraftWeapon *getRules() const;
 	/// Gets the craft weapon's ammo.
 	int getAmmo() const;
 	/// Sets the craft weapon's ammo.
-	void setAmmo(int ammo);
+	bool setAmmo(int ammo);
 	/// Gets the craft weapon's rearming status.
 	bool isRearming() const;
 	/// Sets the craft weapon's rearming status
 	void setRearming(bool rearming);
 	/// Rearms the craft weapon.
-	void rearm();
+	int rearm(const int available, const int clipSize);
+	/// Fires the craft weapon. Used during dogfights.
+	CraftWeaponProjectile* fire() const;
+	/// get how many clips are loaded into this weapon.
+	int getClipsLoaded(const Mod *mod) const;
+
 };
 
 }
-
-#endif

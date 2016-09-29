@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http:///www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_SELECTDESTINATIONSTATE_H
-#define OPENXCOM_SELECTDESTINATIONSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
@@ -44,13 +42,13 @@ private:
 	InteractiveSurface *_btnRotateLeft, *_btnRotateRight, *_btnRotateUp, *_btnRotateDown, *_btnZoomIn, *_btnZoomOut;
 	Window *_window;
 	Text *_txtTitle;
-	TextButton *_btnCancel;
+	TextButton *_btnCancel, *_btnCydonia;
 public:
 	/// Creates the Select Destination state.
-	SelectDestinationState(Game *game, Craft *craft, Globe *globe);
+	SelectDestinationState(Craft *craft, Globe *globe);
 	/// Cleans up the Select Destination state.
 	~SelectDestinationState();
-	/// Updates the palette.
+	/// Resets globe.
 	void init();
 	/// Runs the timer.
 	void think();
@@ -74,14 +72,21 @@ public:
 	void btnRotateDownPress(Action *action);
 	/// Handler for releasing the Rotate Down arrow.
 	void btnRotateDownRelease(Action *action);
-	/// Handler for clicking the Zoom In icon.
-	void btnZoomInClick(Action *action);
-	/// Handler for clicking the Zoom Out icon.
-	void btnZoomOutClick(Action *action);
+	/// Handler for left-clicking the Zoom In icon.
+	void btnZoomInLeftClick(Action *action);
+	/// Handler for right-clicking the Zoom In icon.
+	void btnZoomInRightClick(Action *action);
+	/// Handler for left-clicking the Zoom Out icon.
+	void btnZoomOutLeftClick(Action *action);
+	/// Handler for right-clicking the Zoom Out icon.
+	void btnZoomOutRightClick(Action *action);
 	/// Handler for clicking the Cancel button.
 	void btnCancelClick(Action *action);
+	/// Handler for clicking the Cydonia mission button.
+	void btnCydoniaClick(Action *action);
+	/// Let the state know the window has been resized.
+	void resize(int &dX, int &dY);
+
 };
 
 }
-
-#endif

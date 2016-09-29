@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,133 +17,138 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_MAP_H
-#define OPENXCOM_MAP_H
-
 #include "../Engine/InteractiveSurface.h"
-#include <set>
+#include "../Engine/Options.h"
+#include "Position.h"
+#include <vector>
 
 namespace OpenXcom
 {
 
-class ResourcePack;
 class SavedBattleGame;
-class Timer;
 class Surface;
-class MapData;
-class Position;
-class Tile;
+class SurfaceSet;
 class BattleUnit;
-class BulletSprite;
 class Projectile;
 class Explosion;
-
-// below Y 140 the buttons area starts
-#define BUTTONS_AREA 140
+class BattlescapeMessage;
+class Camera;
+class Timer;
+class Text;
 
 enum CursorType { CT_NONE, CT_NORMAL, CT_AIM, CT_PSI, CT_WAYPOINT, CT_THROW };
-
 /**
- * Interactive map of the battlescape
+ * Interactive map of the battlescape.
  */
 class Map : public InteractiveSurface
 {
 private:
-	SavedBattleGame *_save;
-	ResourcePack *_res;
-	Timer *_scrollTimer;
-	Surface *_arrow;
+	static const int SCROLL_INTERVAL = 15;
+	static const int BULLET_SPRITES = 35;
+	Timer *_scrollMouseTimer, *_scrollKeyTimer;
 	Game *_game;
-	Surface **_tileFloorCache;
-	Surface **_tileWallsCache;
-	int _tileCount;
-	std::vector<Surface *> _unitCache;
-	int _mapOffsetX, _mapOffsetY, _viewHeight;
-	int _bufOffsetX, _bufOffsetY;
-	int _RMBClickX, _RMBClickY;
+	SavedBattleGame *_save;
+	Surface *_arrow;
 	int _spriteWidth, _spriteHeight;
 	int _selectorX, _selectorY;
+	int _mouseX, _mouseY;
 	CursorType _cursorType;
+	int _cursorSize;
 	int _animFrame;
-	int _scrollX, _scrollY;
-	bool _RMBDragging;
-	int _centerX, _centerY;
-	Surface *_buffer;
-	BulletSprite *_bullet[36];
-	BulletSprite *_bulletShadow[36];
 	Projectile *_projectile;
-	std::set<Explosion *> _explosions;
-	bool _cameraFollowed;
+	bool _projectileInFOV;
+	std::list<Explosion *> _explosions;
+	bool _explosionInFOV, _launch;
+	BattlescapeMessage *_message;
+	Camera *_camera;
+	int _visibleMapHeight;
+	std::vector<Position> _waypoints;
+	bool _unitDying, _smoothCamera, _smoothingEngaged, _flashScreen;
+	PathPreview _previewSetting;
+	Text *_txtAccuracy;
+	SurfaceSet *_projectileSet;
 
-
-	void minMaxInt(int *value, const int minValue, const int maxValue);
-	bool cacheTileSprites(int i);
-	void convertScreenToMap(int screenX, int screenY, int *mapX, int *mapY);
+	void drawTerrain(Surface *surface);
+	int getTerrainLevel(Position pos, int size) const;
+	int _iconHeight, _iconWidth, _messageColor;
+	const std::vector<Uint8> *_transparencies;
 public:
 	/// Creates a new map at the specified position and size.
-	Map(int width, int height, int x, int y);
+	Map(Game* game, int width, int height, int x, int y, int visibleMapHeight);
 	/// Cleans up the map.
 	~Map();
-	/// savedbattlegame contains all game content like Tiles, Soldiers, Items,...
-	void setSavedGame(SavedBattleGame *save, Game *game);
-	/// resourcepack contains tilesheets for terrain and units,... for rendering
-	void setResourcePack(ResourcePack *res);
-	/// sets stuff up
+	/// Initializes the map.
 	void init();
-	/// handle timers
+	/// Handles timers.
 	void think();
-	/// draw the surface
-	void draw(bool forceRedraw);
-	/// draws the terrain
-	void drawTerrain(Surface *surface);
-	/// Special handling for mouse clicks.
-	void mouseClick(Action *action, State *state);
-	/// Special handling for mous over
+	/// Draws the surface.
+	void draw();
+	/// Sets the palette.
+	void setPalette(SDL_Color *colors, int firstcolor = 0, int ncolors = 256);
+	/// Special handling for mouse press.
+	void mousePress(Action *action, State *state);
+	/// Special handling for mouse release.
+	void mouseRelease(Action *action, State *state);
+	/// Special handling for mouse over
 	void mouseOver(Action *action, State *state);
 	/// Special handling for key presses.
 	void keyboardPress(Action *action, State *state);
-	/// Scrolls the view (eg when mouse is on the edge of the screen)
-	void scroll();
-	/// rotate the tileframes 0-7
-	void animate();
-	/// move map layer up
-	void up();
-	/// move map layer down
-	void down();
-	/// set view height
-	void setViewHeight(int viewheight);
-	/// Center map on a unit.
-	void centerOnPosition(const Position &pos, bool redraw = true);
-	/// Converts map coordinates to screen coordinates.
-	void convertMapToScreen(const Position &mapPos, Position *screenPos);
-	/// Converts voxel coordinates to screen coordinates.
-	void convertVoxelToScreen(const Position &voxelPos, Position *screenPos);
+	/// Special handling for key releases.
+	void keyboardRelease(Action *action, State *state);
+	/// Rotates the tileframes 0-7
+	void animate(bool redraw);
 	/// Sets the battlescape selector position relative to mouseposition.
 	void setSelectorPosition(int mx, int my);
-	/// Draws the small arrow above the selected soldier.
-	void drawArrow(const Position &pos, Surface *surface);
-	/// Get the currently selected position.
-	void getSelectorPosition(Position *pos);
-	/// Calculate the offset of a soldier, when it is walking in the middle of 2 tiles.
+	/// Gets the currently selected position.
+	void getSelectorPosition(Position *pos) const;
+	/// Calculates the offset of a soldier, when it is walking in the middle of 2 tiles.
 	void calculateWalkingOffset(BattleUnit *unit, Position *offset);
-	/// Set the 3D cursor type.
-	void setCursorType(CursorType type);
-	/// Get the 3D cursor type.
+	/// Sets the 3D cursor type.
+	void setCursorType(CursorType type, int size = 1);
+	/// Gets the 3D cursor type.
 	CursorType getCursorType() const;
-	/// Cache tile sprites.
-	void cacheTileSprites();
-	/// Cache units.
+	/// Caches units.
 	void cacheUnits();
-	/// Set projectile
+	/// Caches the unit.
+	void cacheUnit(BattleUnit *unit);
+	/// Sets projectile.
 	void setProjectile(Projectile *projectile);
-	/// Get projectile
+	/// Gets projectile.
 	Projectile *getProjectile() const;
-	/// Get explosion set
-	std::set<Explosion*> *getExplosions();
-	///
-	bool didCameraFollow();
+	/// Gets explosion set.
+	std::list<Explosion*> *getExplosions();
+	/// Gets the pointer to the camera.
+	Camera *getCamera();
+	/// Mouse-scrolls the camera.
+	void scrollMouse();
+	/// Keyboard-scrolls the camera.
+	void scrollKey();
+	/// Get waypoints vector.
+	std::vector<Position> *getWaypoints();
+	/// Set mouse-buttons' pressed state.
+	void setButtonsPressed(Uint8 button, bool pressed);
+	/// Sets the unitDying flag.
+	void setUnitDying(bool flag);
+	/// Refreshes the battlescape selector after scrolling.
+	void refreshSelectorPosition();
+	/// Special handling for updating map height.
+	void setHeight(int height);
+	/// Special handling for updating map width.
+	void setWidth(int width);
+	/// Get the vertical position of the hidden movement screen.
+	int getMessageY() const;
+	/// Get the icon height.
+	int getIconHeight() const;
+	/// Get the icon width.
+	int getIconWidth() const;
+	/// Convert a map position to a sound angle.
+	int getSoundAngle(Position pos) const;
+	/// Reset the camera smoothing bool.
+	void resetCameraSmoothing();
+	/// Set whether the screen should "flash" or not.
+	void setBlastFlash(bool flash);
+	/// Check if the screen is flashing this.
+	bool getBlastFlash() const;
 };
 
 }
-
-#endif

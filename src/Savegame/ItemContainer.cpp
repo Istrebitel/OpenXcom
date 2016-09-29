@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,8 +17,8 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ItemContainer.h"
-#include "../Ruleset/Ruleset.h"
-#include "../Ruleset/RuleItem.h"
+#include "../Mod/Mod.h"
+#include "../Mod/RuleItem.h"
 
 namespace OpenXcom
 {
@@ -26,7 +26,7 @@ namespace OpenXcom
 /**
  * Initializes an item container with no contents.
  */
-ItemContainer::ItemContainer() : _qty()
+ItemContainer::ItemContainer()
 {
 }
 
@@ -43,16 +43,18 @@ ItemContainer::~ItemContainer()
  */
 void ItemContainer::load(const YAML::Node &node)
 {
-	node >> _qty;
+	_qty = node.as< std::map<std::string, int> >(_qty);
 }
 
 /**
  * Saves the item container to a YAML file.
- * @param out YAML emitter.
+ * @return YAML node.
  */
-void ItemContainer::save(YAML::Emitter &out) const
+YAML::Node ItemContainer::save() const
 {
-	out << _qty;
+	YAML::Node node;
+	node = _qty;
+	return node;
 }
 
 /**
@@ -62,6 +64,10 @@ void ItemContainer::save(YAML::Emitter &out) const
  */
 void ItemContainer::addItem(const std::string &id, int qty)
 {
+	if (id.empty())
+	{
+		return;
+	}
 	if (_qty.find(id) == _qty.end())
 	{
 		_qty[id] = 0;
@@ -76,7 +82,7 @@ void ItemContainer::addItem(const std::string &id, int qty)
  */
 void ItemContainer::removeItem(const std::string &id, int qty)
 {
-	if (_qty.find(id) == _qty.end())
+	if (id.empty() || _qty.find(id) == _qty.end())
 	{
 		return;
 	}
@@ -97,8 +103,12 @@ void ItemContainer::removeItem(const std::string &id, int qty)
  */
 int ItemContainer::getItem(const std::string &id) const
 {
-	std::map<std::string, int>::const_iterator it = _qty.find(id);
+	if (id.empty())
+	{
+		return 0;
+	}
 
+	std::map<std::string, int>::const_iterator it = _qty.find(id);
 	if (it == _qty.end())
 	{
 		return 0;
@@ -125,15 +135,15 @@ int ItemContainer::getTotalQuantity() const
 
 /**
  * Returns the total size of the items in the container.
- * @param rule Pointer to ruleset.
+ * @param mod Pointer to mod.
  * @return Total item size.
  */
-double ItemContainer::getTotalSize(const Ruleset *rule) const
+double ItemContainer::getTotalSize(const Mod *mod) const
 {
 	double total = 0;
 	for (std::map<std::string, int>::const_iterator i = _qty.begin(); i != _qty.end(); ++i)
 	{
-		total += rule->getItem(i->first)->getSize() * i->second;
+		total += mod->getItem(i->first)->getSize() * i->second;
 	}
 	return total;
 }
@@ -142,7 +152,7 @@ double ItemContainer::getTotalSize(const Ruleset *rule) const
  * Returns all the items currently contained within.
  * @return List of contents.
  */
-std::map<std::string, int> *const ItemContainer::getContents()
+std::map<std::string, int> *ItemContainer::getContents()
 {
 	return &_qty;
 }

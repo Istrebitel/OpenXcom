@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_BASENAMESTATE_H
-#define OPENXCOM_BASENAMESTATE_H
-
 #include "../Engine/State.h"
+#include "Globe.h"
 
 namespace OpenXcom
 {
@@ -33,6 +32,8 @@ class Globe;
 
 /**
  * Window used to input a name for a new base.
+ * Player's first Base uses this screen
+ * additional bases use ConfirmNewBaseState
  */
 class BaseNameState : public State
 {
@@ -46,17 +47,13 @@ private:
 	bool _first;
 public:
 	/// Creates the Base Name state.
-	BaseNameState(Game *game, Base *base, Globe *globe, bool first);
+	BaseNameState(Base *base, Globe *globe, bool first);
 	/// Cleans up the Base Name state.
 	~BaseNameState();
-	/// Names the base.
-	void nameBase();
 	/// Handler for clicking the OK button.
 	void btnOkClick(Action *action);
-	/// Handler for pressing a key on the Name edit.
-	void edtNameKeyPress(Action *action);
+	/// Handler for changing text on the Name edit.
+	void edtNameChange(Action *action);
 };
 
 }
-
-#endif

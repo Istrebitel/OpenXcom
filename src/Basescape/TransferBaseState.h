@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TRANSFERBASESTATE_H
-#define OPENXCOM_TRANSFERBASESTATE_H
-
 #include "../Engine/State.h"
 #include <vector>
 
@@ -46,7 +44,7 @@ private:
 	std::vector<Base*> _bases;
 public:
 	/// Creates the Transfer Base state.
-	TransferBaseState(Game *game, Base *base);
+	TransferBaseState(Base *base);
 	/// Cleans up the Transfer Base state.
 	~TransferBaseState();
 	/// Handler for clicking the Cancel button.
@@ -56,5 +54,3 @@ public:
 };
 
 }
-
-#endif

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_TEXTLIST_H
-#define OPENXCOM_TEXTLIST_H
-
 #include <vector>
+#include <map>
 #include "../Engine/InteractiveSurface.h"
 #include "Text.h"
 
@@ -28,8 +27,9 @@ namespace OpenXcom
 
 enum ArrowOrientation { ARROW_VERTICAL, ARROW_HORIZONTAL };
 
-class Font;
 class ArrowButton;
+class ComboBox;
+class ScrollBar;
 
 /**
  * List of Text's split into columns.
@@ -41,40 +41,76 @@ class TextList : public InteractiveSurface
 {
 private:
 	std::vector< std::vector<Text*> > _texts;
-	std::vector<int> _columns;
+	std::vector<size_t> _columns, _rows;
 	Font *_big, *_small, *_font;
-	unsigned int _scroll, _visibleRows;
+	Language *_lang;
+	size_t _scroll, _visibleRows, _selRow;
 	Uint8 _color, _color2;
-	TextHAlign _align;
-	bool _dot, _selectable, _condensed;
-	unsigned int _selRow;
+	std::map<int, TextHAlign> _align;
+	bool _dot, _selectable, _condensed, _contrast, _wrap, _flooding;
 	Surface *_bg, *_selector;
 	ArrowButton *_up, *_down;
+	ScrollBar *_scrollbar;
 	int _margin;
+	bool _scrolling;
 	std::vector<ArrowButton*> _arrowLeft, _arrowRight;
-	int _arrowPos;
+	int _arrowPos, _scrollPos;
 	ArrowOrientation _arrowType;
 	ActionHandler _leftClick, _leftPress, _leftRelease, _rightClick, _rightPress, _rightRelease;
+	int _arrowsLeftEdge, _arrowsRightEdge;
+	ComboBox *_comboBox;
 
 	/// Updates the arrow buttons.
 	void updateArrows();
+	/// Updates the visible rows.
+	void updateVisible();
 public:
 	/// Creates a text list with the specified size and position.
 	TextList(int width, int height, int x = 0, int y = 0);
 	/// Cleans up the text list.
 	~TextList();
+	/// Sets the X position of the surface.
+	void setX(int x);
+	/// Sets the Y position of the surface.
+	void setY(int y);
+	/// Gets the arrowsLeftEdge.
+	int getArrowsLeftEdge();
+	/// Gets the arrowsRightEdge.
+	int getArrowsRightEdge();
 	/// Unpresses the surface.
 	void unpress(State *state);
-	/// Gets a certain cell in the text list.
-	Text *const getCell(int row, int col) const;
+	/// Sets the text color of a certain cell.
+	void setCellColor(size_t row, size_t column, Uint8 color);
+	/// Sets the text color of a certain row.
+	void setRowColor(size_t row, Uint8 color);
+	/// Gets the text of a certain cell.
+	std::wstring getCellText(size_t row, size_t column) const;
+	/// Sets the text of a certain cell.
+	void setCellText(size_t row, size_t column, const std::wstring &text);
+	/// Gets the X position of a certain column.
+	int getColumnX(size_t column) const;
+	/// Gets the Y position of a certain row.
+	int getRowY(size_t row) const;
+	/// Gets the height of the row text in pixels
+	int getTextHeight(size_t row) const;
+	/// Gets the number of lines in the wrapped text for the specified row
+	int getNumTextLines(size_t row) const;
+	/// Gets the amount of text in the list.
+	size_t getTexts() const;
+	/// Gets the amount of rows in the list.
+	size_t getRows() const;
+	/// Gets the amount of visible rows in the list.
+	size_t getVisibleRows() const;
 	/// Adds a new row to the text list.
 	void addRow(int cols, ...);
 	/// Sets the columns in the text list.
 	void setColumns(int cols, ...);
 	/// Sets the palette of the text list.
 	void setPalette(SDL_Color *colors, int firstcolor = 0, int ncolors = 256);
-	/// Sets the fonts of the text list.
-	void setFonts(Font *big, Font *small);
+	/// Initializes the resources for the text list.
+	void initText(Font *big, Font *small, Language *lang);
+	/// Sets the height of the surface.
+	void setHeight(int height);
 	/// Sets the text color of the text list.
 	void setColor(Uint8 color);
 	/// Gets the text color of the text list.
@@ -83,8 +119,12 @@ public:
 	void setSecondaryColor(Uint8 color);
 	/// Gets the secondary color of the text list.
 	Uint8 getSecondaryColor() const;
+	/// Sets the text list's wordwrap setting.
+	void setWordWrap(bool wrap);
+	/// Sets the text list's high contrast color setting.
+	void setHighContrast(bool contrast);
 	/// Sets the text horizontal alignment of the text list.
-	void setAlign(TextHAlign align);
+	void setAlign(TextHAlign align, int col = -1);
 	/// Sets whether to separate columns with dots.
 	void setDot(bool dot);
 	/// Sets whether the list is selectable.
@@ -98,9 +138,11 @@ public:
 	/// Sets the background for the selector.
 	void setBackground(Surface *bg);
 	/// Gets the selected row in the list.
-	int getSelectedRow() const;
+	unsigned int getSelectedRow() const;
 	/// Sets the margin of the text list.
 	void setMargin(int margin);
+	/// Gets the margin of the text list.
+	int getMargin() const;
 	/// Sets the arrow color of the text list.
 	void setArrowColor(Uint8 color);
 	/// Sets the arrow column of the text list.
@@ -120,9 +162,11 @@ public:
 	/// Clears the list.
 	void clearList();
 	/// Scrolls the list up.
-	void scrollUp();
+	void scrollUp(bool toMax, bool scrollByWheel = false);
 	/// Scrolls the list down.
-	void scrollDown();
+	void scrollDown(bool toMax, bool scrollByWheel = false);
+	/// Sets the list scrolling.
+	void setScrolling(bool scrolling, int scrollPos = 4);
 	/// Draws the text onto the text list.
 	void draw();
 	/// Blits the text list onto another surface.
@@ -141,9 +185,18 @@ public:
 	void mouseOver(Action *action, State *state);
 	/// Special handling for mouse hovering out.
 	void mouseOut(Action *action, State *state);
-
+	/// get the scroll depth
+	size_t getScroll();
+	/// set the scroll depth
+	void scrollTo(size_t scroll);
+	/// Attaches this button to a combobox.
+	void setComboBox(ComboBox *comboBox);
+	/// Check for a combobox.
+	ComboBox *getComboBox() const;
+	void setBorderColor(Uint8 color);
+	int getScrollbarColor();
+	/// Allows the cell to flood into other columns.
+	void setFlooding(bool flooding);
 };
 
 }
-
-#endif

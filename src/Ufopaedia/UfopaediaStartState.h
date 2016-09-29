@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,13 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_UFOPAEDIASTARTSTATE_H
-#define OPENXCOM_UFOPAEDIASTARTSTATE_H
-
 #include "../Engine/State.h"
-#include "Ufopaedia.h"
 #include <string>
+#include <vector>
 
 namespace OpenXcom
 {
@@ -31,42 +28,26 @@ namespace OpenXcom
 	class Window;
 	class Text;
 	class TextButton;
-	
+
 	/**
 	 * UfopaediaStartState is the screen that opens when clicking Ufopaedia button in Geoscape.
 	 * Presents buttons to all sections of Ufopaedia, opening a UfopaediaSelectState on click.
 	 */
-	
+
 	class UfopaediaStartState : public State
 	{
 	public:
-		UfopaediaStartState(Game *game);
+		UfopaediaStartState();
 		virtual ~UfopaediaStartState();
-		
+
 	protected:
 		Window *_window;
 		Text *_txtTitle;
 		TextButton *_btnOk;
-		TextButton *_btnCraftArmament;
-		TextButton *_btnHWP;
-		TextButton *_btnWeaponsEquipment;
-		TextButton *_btnAlienArtefacts;
-		TextButton *_btnBaseFacilities;
-		TextButton *_btnAlienLifeforms;
-		TextButton *_btnAlienResearch;
-		TextButton *_btnUfoComponents;
-		TextButton *_btnUfos;
-		
+		std::vector<TextButton*> _btnSections;
+
 		// navigation callbacks
+		void btnSectionClick(Action *action);
 		void btnOkClick(Action *action);
-		void btnCraftArmamentClick(Action *action);
-		void btnWeaponsEquipmentClick(Action *action);
-		void btnBaseFacilitiesClick(Action *action);
-		void btnAlienLifeformsClick(Action *action);
-		void btnAlienResearchClick(Action *action);
-		void btnUfosClick(Action *action);
-//		void btnClick(Action *action);
 	};
 }
-
-#endif

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,15 +17,13 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_DISMANTLEFACILITYSTATE_H
-#define OPENXCOM_DISMANTLEFACILITYSTATE_H
-
 #include "../Engine/State.h"
 
 namespace OpenXcom
 {
 
 class Base;
+class BaseView;
 class BaseFacility;
 class TextButton;
 class Window;
@@ -38,6 +37,7 @@ class DismantleFacilityState : public State
 {
 private:
 	Base *_base;
+	BaseView *_view;
 	BaseFacility *_fac;
 
 	TextButton *_btnOk, *_btnCancel;
@@ -45,7 +45,7 @@ private:
 	Text *_txtTitle, *_txtFacility;
 public:
 	/// Creates the Dismantle Facility state.
-	DismantleFacilityState(Game *game, Base *base, BaseFacility *fac);
+	DismantleFacilityState(Base *base, BaseView *view, BaseFacility *fac);
 	/// Cleans up the Dismantle Facility state.
 	~DismantleFacilityState();
 	/// Handler for clicking the OK button.
@@ -55,5 +55,3 @@ public:
 };
 
 }
-
-#endif

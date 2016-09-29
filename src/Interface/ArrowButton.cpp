@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -19,6 +19,7 @@
 #include "ArrowButton.h"
 #include "TextList.h"
 #include "../Engine/Timer.h"
+#include "../Engine/Action.h"
 
 namespace OpenXcom
 {
@@ -33,8 +34,6 @@ namespace OpenXcom
  */
 ArrowButton::ArrowButton(ArrowShape shape, int width, int height, int x, int y) : ImageButton(width, height, x, y), _shape(shape), _list(0)
 {
-	_validButton = SDL_BUTTON_LEFT;
-
 	_timer = new Timer(50);
 	_timer->onTimer((SurfaceHandler)&ArrowButton::scroll);
 }
@@ -47,18 +46,40 @@ ArrowButton::~ArrowButton()
 	delete _timer;
 }
 
+bool ArrowButton::isButtonHandled(Uint8 button)
+{
+	if (_list != 0)
+	{
+		return (button == SDL_BUTTON_LEFT || button == SDL_BUTTON_RIGHT);
+	}
+	else
+	{
+		return ImageButton::isButtonHandled(button);
+	}
+}
+
 /**
- * Changes the color for the arrow button.
+ * Changes the color for the image button.
  * @param color Color value.
  */
 void ArrowButton::setColor(Uint8 color)
 {
 	ImageButton::setColor(color);
-	draw();
+	_redraw = true;
 }
 
 /**
- * Changes the text associated with the arrow button.
+ * Changes the shape for the arrow button.
+ * @param shape Shape of the arrow.
+ */
+void ArrowButton::setShape(ArrowShape shape)
+{
+	_shape = shape;
+	_redraw = true;
+}
+
+/**
+ * Changes the list associated with the arrow button.
  * This makes the button scroll that list.
  * @param list Pointer to text list.
  */
@@ -72,11 +93,12 @@ void ArrowButton::setTextList(TextList *list)
  */
 void ArrowButton::draw()
 {
+	ImageButton::draw();
 	lock();
 
 	// Draw button
 	SDL_Rect square;
-	int color = _color - 1;
+	int color = _color + 2;
 
 	square.x = 0;
 	square.y = 0;
@@ -87,24 +109,25 @@ void ArrowButton::draw()
 
 	square.x++;
 	square.y++;
-	color = _color + 2;
+	color = _color + 5;
 
 	drawRect(&square, color);
 
 	square.w--;
 	square.h--;
-	color = _color + 1;
+	color = _color + 4;
 
 	drawRect(&square, color);
 
-	setPixel(0, 0, _color - 2);
-	setPixel(0, getHeight() - 1, _color + 1);
-	setPixel(getWidth() - 1, 0, _color + 1);
+	setPixel(0, 0, _color + 1);
+	setPixel(0, getHeight() - 1, _color + 4);
+	setPixel(getWidth() - 1, 0, _color + 4);
 
-	color = _color - 2;
+	color = _color + 1;
 
-	if (_shape == ARROW_BIG_UP)
+	switch (_shape)
 	{
+	case OpenXcom::ARROW_BIG_UP:
 		// Draw arrow square
 		square.x = 5;
 		square.y = 8;
@@ -126,9 +149,8 @@ void ArrowButton::draw()
 			square.y--;
 		}
 		drawRect(&square, color);
-	}
-	else if (_shape == ARROW_BIG_DOWN)
-	{
+		break;
+	case OpenXcom::ARROW_BIG_DOWN:
 		// Draw arrow square
 		square.x = 5;
 		square.y = 3;
@@ -150,9 +172,8 @@ void ArrowButton::draw()
 			square.y++;
 		}
 		drawRect(&square, color);
-	}
-	else if (_shape == ARROW_SMALL_UP)
-	{
+		break;
+	case OpenXcom::ARROW_SMALL_UP:
 		// Draw arrow triangle 1
 		square.x = 1;
 		square.y = 5;
@@ -180,9 +201,8 @@ void ArrowButton::draw()
 			square.y--;
 		}
 		drawRect(&square, color);
-	}
-	else if (_shape == ARROW_SMALL_DOWN)
-	{
+		break;
+	case OpenXcom::ARROW_SMALL_DOWN:
 		// Draw arrow triangle 1
 		square.x = 1;
 		square.y = 2;
@@ -210,9 +230,8 @@ void ArrowButton::draw()
 			square.y++;
 		}
 		drawRect(&square, color);
-	}
-	else if (_shape == ARROW_SMALL_LEFT)
-	{
+		break;
+	case OpenXcom::ARROW_SMALL_LEFT:
 		// Draw arrow triangle 1
 		square.x = 2;
 		square.y = 4;
@@ -242,9 +261,8 @@ void ArrowButton::draw()
 		}
 		square.w = 1;
 		drawRect(&square, color);
-	}
-	else if (_shape == ARROW_SMALL_RIGHT)
-	{
+		break;
+	case OpenXcom::ARROW_SMALL_RIGHT:
 		// Draw arrow triangle 1
 		square.x = 7;
 		square.y = 4;
@@ -276,6 +294,9 @@ void ArrowButton::draw()
 		square.x++;
 		square.w = 1;
 		drawRect(&square, color);
+		break;
+	default:
+		break;
 	}
 
 	unlock();
@@ -296,11 +317,11 @@ void ArrowButton::scroll()
 {
 	if (_shape == ARROW_BIG_UP)
 	{
-		_list->scrollUp();
+		_list->scrollUp(false);
 	}
 	else if (_shape == ARROW_BIG_DOWN)
 	{
-		_list->scrollDown();
+		_list->scrollDown(false);
 	}
 }
 
@@ -314,7 +335,12 @@ void ArrowButton::mousePress(Action *action, State *state)
 	ImageButton::mousePress(action, state);
 	if (_list != 0)
 	{
-		_timer->start();
+		if (action->getDetails()->button.button == SDL_BUTTON_LEFT)
+		{
+			_timer->start();
+		}
+		else if (action->getDetails()->button.button == SDL_BUTTON_WHEELUP) _list->scrollUp(false, true);
+		else if (action->getDetails()->button.button == SDL_BUTTON_WHEELDOWN) _list->scrollDown(false, true);
 	}
 }
 
@@ -326,9 +352,23 @@ void ArrowButton::mousePress(Action *action, State *state)
 void ArrowButton::mouseRelease(Action *action, State *state)
 {
 	ImageButton::mouseRelease(action, state);
-	if (_list != 0)
+	if (_list != 0 && action->getDetails()->button.button == SDL_BUTTON_LEFT)
 	{
 		_timer->stop();
+	}
+}
+
+/*
+ * Scrolls the associated list to top or bottom.
+ * @param action Pointer to an action.
+ * @param state State that the action handlers belong to.
+ */
+void ArrowButton::mouseClick(Action *action, State *state)
+{
+	ImageButton::mouseClick(action, state);
+	if (_list != 0 && SDL_BUTTON_RIGHT == action->getDetails()->button.button) {
+		if (_shape == ARROW_BIG_UP) _list->scrollUp(true);
+		else if (_shape == ARROW_BIG_DOWN) _list->scrollDown(true);
 	}
 }
 

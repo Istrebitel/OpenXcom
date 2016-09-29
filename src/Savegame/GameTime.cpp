@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,6 +17,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "GameTime.h"
+#include "../Engine/Language.h"
 
 namespace OpenXcom
 {
@@ -48,31 +49,30 @@ GameTime::~GameTime()
  */
 void GameTime::load(const YAML::Node &node)
 {
-	node["second"] >> _second;
-	node["second"] >> _second;
-	node["minute"] >> _minute;
-	node["hour"] >> _hour;
-	node["weekday"] >> _weekday;
-	node["day"] >> _day;
-	node["month"] >> _month;
-	node["year"] >> _year;
+	_second = node["second"].as<int>(_second);
+	_minute = node["minute"].as<int>(_minute);
+	_hour = node["hour"].as<int>(_hour);
+	_weekday = node["weekday"].as<int>(_weekday);
+	_day = node["day"].as<int>(_day);
+	_month = node["month"].as<int>(_month);
+	_year = node["year"].as<int>(_year);
 }
 
 /**
  * Saves the time to a YAML file.
- * @param out YAML emitter.
+ * @return YAML node.
  */
-void GameTime::save(YAML::Emitter &out) const
+YAML::Node GameTime::save() const
 {
-	out << YAML::BeginMap;
-	out << YAML::Key << "second" << YAML::Value << _second;
-	out << YAML::Key << "minute" << YAML::Value << _minute;
-	out << YAML::Key << "hour" << YAML::Value << _hour;
-	out << YAML::Key << "weekday" << YAML::Value << _weekday;
-	out << YAML::Key << "day" << YAML::Value << _day;
-	out << YAML::Key << "month" << YAML::Value << _month;
-	out << YAML::Key << "year" << YAML::Value << _year;
-	out << YAML::EndMap;
+	YAML::Node node;
+	node["second"] = _second;
+	node["minute"] = _minute;
+	node["hour"] = _hour;
+	node["weekday"] = _weekday;
+	node["day"] = _day;
+	node["month"] = _month;
+	node["year"] = _year;
+	return node;
 }
 
 /**
@@ -193,27 +193,33 @@ int GameTime::getDay() const
 }
 
 /**
- * Returns a localizable-string representation of
- * the cardinal operator for the current ingame day.
- * @return Day string ID.
+ * Returns the localized representation of the current
+ * ingame day with the cardinal operator.
+ * @param lang Pointer to current language.
+ * @return Localized day string.
  */
-std::string GameTime::getDayString() const
+std::wstring GameTime::getDayString(Language *lang) const
 {
+	std::string s;
 	switch (_day)
 	{
 	case 1:
 	case 21:
 	case 31:
-		return "STR_ST";
+		s = "STR_DATE_FIRST";
+		break;
 	case 2:
 	case 22:
-		return "STR_ND";
+		s = "STR_DATE_SECOND";
+		break;
 	case 3:
 	case 23:
-		return "STR_RD";
+		s = "STR_DATE_THIRD";
+		break;
 	default:
-		return "STR_TH";
+		s = "STR_DATE_FOURTH";
 	}
+	return lang->getString(s).arg(_day);
 }
 
 /**

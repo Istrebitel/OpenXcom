@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,9 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_INTERCEPTSTATE_H
-#define OPENXCOM_INTERCEPTSTATE_H
-
 #include <vector>
 #include "../Engine/State.h"
 
@@ -32,6 +30,7 @@ class TextList;
 class Base;
 class Globe;
 class Craft;
+class Target;
 
 /**
  * Intercept window that lets the player launch
@@ -40,24 +39,27 @@ class Craft;
 class InterceptState : public State
 {
 private:
-	TextButton *_btnCancel;
+	TextButton *_btnCancel, *_btnGotoBase;
 	Window *_window;
 	Text *_txtTitle, *_txtCraft, *_txtStatus, *_txtBase, *_txtWeapons;
 	TextList *_lstCrafts;
 	Globe *_globe;
 	Base *_base;
+	Target *_target;
 	std::vector<Craft*> _crafts;
 public:
 	/// Creates the Intercept state.
-	InterceptState(Game *game, Globe *globe, Base *base = 0);
+	InterceptState(Globe *globe, Base *base = 0, Target *target = 0);
 	/// Cleans up the Intercept state.
 	~InterceptState();
 	/// Handler for clicking the Cancel button.
 	void btnCancelClick(Action *action);
+	/// Handler for clicking the Go To Base button.
+	void btnGotoBaseClick(Action *action);
 	/// Handler for clicking the Crafts list.
-	void lstCraftsClick(Action *action);
+	void lstCraftsLeftClick(Action *action);
+	/// Handler for right clicking the Crafts list.
+	void lstCraftsRightClick(Action *action);
 };
 
 }
-
-#endif

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_SOUNDSET_H
-#define OPENXCOM_SOUNDSET_H
-
-#include <vector>
+#include <map>
 #include <string>
 
 namespace OpenXcom
@@ -35,8 +33,7 @@ class Sound;
 class SoundSet
 {
 private:
-	int _width, _height;
-	std::vector<Sound*> _sounds;
+	std::map<int, Sound*> _sounds;
 public:
 	/// Crates a sound set.
 	SoundSet();
@@ -45,11 +42,13 @@ public:
 	/// Loads an X-Com CAT set of sound files.
 	void loadCat(const std::string &filename, bool wav = true);
 	/// Gets a particular sound from the set.
-	Sound *const getSound(unsigned int i) const;
+	Sound *getSound(unsigned int i);
+	/// Creates a new sound and returns a pointer to it.
+	Sound *addSound(unsigned int i);
 	/// Gets the total sounds in the set.
-	int getTotalSounds() const;
+	size_t getTotalSounds() const;
+	/// Loads a specific entry from a CAT file into the soundset.
+	void loadCatbyIndex(const std::string &filename, int index);
 };
 
 }
-
-#endif

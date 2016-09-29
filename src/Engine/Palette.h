@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,11 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_PALETTE_H
-#define OPENXCOM_PALETTE_H
-
 #include <string>
-#include "SDL.h"
+#include <SDL.h>
 
 namespace OpenXcom
 {
@@ -34,6 +32,7 @@ class Palette
 {
 private:
 	SDL_Color *_colors;
+	int _count;
 public:
 	/// Creates a blank palette.
 	Palette();
@@ -42,8 +41,10 @@ public:
 	/// Loads the colors from an X-Com palette.
 	void loadDat(const std::string &filename, int ncolors, int offset = 0);
 	// Gets a certain color from the palette.
-	SDL_Color *const getColors(int offset = 0) const;
+	SDL_Color *getColors(int offset = 0) const;
 
+	void savePal(const std::string &file) const;
+	void setColors(SDL_Color* pal, int ncolors);
 	/// Converts a given color into a RGBA color value.
 	static Uint32 getRGBA(SDL_Color* pal, Uint8 color);
 	/// Gets the position of a given palette.
@@ -67,5 +68,3 @@ public:
 };
 
 }
-
-#endif

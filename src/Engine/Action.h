@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_ACTION_H
-#define OPENXCOM_ACTION_H
-
-#include "SDL.h"
+#include <SDL.h>
 
 namespace OpenXcom
 {
@@ -36,33 +34,43 @@ class Action
 private:
 	SDL_Event *_ev;
 	double _scaleX, _scaleY;
-	int _mouseX, _mouseY;
+	int _topBlackBand, _leftBlackBand, _mouseX, _mouseY, _surfaceX, _surfaceY;
 	InteractiveSurface *_sender;
 public:
 	/// Creates an action with given event data.
-	Action(SDL_Event *ev, double scaleX, double scaleY);
+	Action(SDL_Event *ev, double scaleX, double scaleY, int topBlackBand, int leftBlackBand);
 	/// Cleans up the action.
 	~Action();
 	/// Gets the screen's X scale.
 	double getXScale() const;
 	/// Gets the screen's Y scale.
 	double getYScale() const;
+	/// Sets the action as a mouse action.
+	void setMouseAction(int mouseX, int mouseY, int surfaceX, int surfaceY);
+	/// Gets if the action is a mouse action.
+	bool isMouseAction() const;
+	/// Gets the top black band height.
+	int getTopBlackBand() const;
+	/// Gets the left black band width.
+	int getLeftBlackBand() const;
 	/// Gets the mouse's X position.
 	int getXMouse() const;
-	/// Sets the mouse's X position.
-	void setXMouse(int x);
 	/// Gets the mouse's Y position.
 	int getYMouse() const;
-	/// Sets the mouse's Y position.
-	void setYMouse(int y);
+	/// Gets the mouse's absolute X position.
+	double getAbsoluteXMouse() const;
+	/// Gets the mouse's absolute Y position.
+	double getAbsoluteYMouse() const;
+	/// Gets the mouse's relative X position.
+	double getRelativeXMouse() const;
+	/// Gets the mouse's relative Y position.
+	double getRelativeYMouse() const;
 	/// Gets the sender of the action.
-	InteractiveSurface *const getSender() const;
+	InteractiveSurface *getSender() const;
 	/// Sets the sender of the action.
 	void setSender(InteractiveSurface *sender);
 	/// Gets the details of the action.
-	SDL_Event *const getDetails() const;
+	SDL_Event *getDetails() const;
 };
 
 }
-
-#endif

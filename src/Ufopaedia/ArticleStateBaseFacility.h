@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2011 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,11 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_ARTICLESTATEBASEFACILITY_H
-#define OPENXCOM_ARTICLESTATEBASEFACILITY_H
-
-#include <string>
 #include "ArticleState.h"
 
 namespace OpenXcom
@@ -30,18 +26,18 @@ namespace OpenXcom
 	class Text;
 	class TextList;
 	class ArticleDefinitionBaseFacility;
-	
+
 	/**
 	 * ArticleStateBaseFacility has a caption, text, preview image and a stats block.
 	 * The facility image is found using the RuleBasefacility class.
 	 */
-	
+
 	class ArticleStateBaseFacility : public ArticleState
 	{
 	public:
-		ArticleStateBaseFacility(Game *game, ArticleDefinitionBaseFacility *article_defs);
+		ArticleStateBaseFacility(ArticleDefinitionBaseFacility *article_defs);
 		virtual ~ArticleStateBaseFacility();
-		
+
 	protected:
 		Surface *_image;
 		Text *_txtTitle;
@@ -49,5 +45,3 @@ namespace OpenXcom
 		TextList *_lstInfo;
 	};
 }
-
-#endif

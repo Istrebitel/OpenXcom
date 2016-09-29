@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,13 +17,13 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_PATHFINDINGNODE_H
-#define OPENXCOM_PATHFINDINGNODE_H
-
 #include "Position.h"
 
 namespace OpenXcom
 {
+
+class PathfindingOpenSet;
+struct OpenSetEntry;
 
 /**
  * A class that holds pathfinding info for a certain node on the map.
@@ -32,32 +33,64 @@ class PathfindingNode
 private:
 	Position _pos;
 	bool _checked;
-	int _tuCost, _stepsNum;
+	int _tuCost;
 	PathfindingNode* _prevNode;
 	int _prevDir;
+	/// Approximate cost to reach goal position.
+	int _tuGuess;
+	// Invasive field needed by PathfindingOpenSet
+	OpenSetEntry *_openentry;
+	friend class PathfindingOpenSet;
 public:
-	/// Creates a new PathfindingNode class
+	/// Creates a new PathfindingNode class.
 	PathfindingNode(Position pos);
 	/// Cleans up the PathfindingNode.
 	~PathfindingNode();
-	/// Get the node position
-	const Position &getPosition();
-	/// Reset node.
+	/// Gets the node position.
+	const Position &getPosition() const;
+	/// Resets the node.
 	void reset();
-	/// Check node.
-	void check(int tuCost, int stepsNum, PathfindingNode* prevNode, int prevDir);
-	/// is checked?
-	bool isChecked();
-	/// get TU cost
-	int getTUCost();
-	/// get steps num
-	int getStepsNum();
-	/// get previous node
-	PathfindingNode* getPrevNode();
-	/// get previous walking direction
-	int getPrevDir();
+	/// Is checked?
+	bool isChecked() const;
+	/// Marks the node as checked.
+	void setChecked() { _checked = true; }
+	/// Gets the TU cost.
+	int getTUCost(bool missile) const;
+	/// Gets the previous node.
+	PathfindingNode* getPrevNode() const;
+	/// Gets the previous walking direction.
+	int getPrevDir() const;
+	/// Is this node already in a PathfindingOpenSet?
+	bool inOpenSet() const { return (_openentry != 0); }
+	/// Gets the approximate cost to reach the target position.
+	int getTUGuess() const { return _tuGuess; }
+
+	#ifdef __MORPHOS__
+	#undef connect
+	#endif
+
+	/// Connects to previous node along the path.
+	void connect(int tuCost, PathfindingNode* prevNode, int prevDir, const Position &target);
+	/// Connects to previous node along a visit.
+	void connect(int tuCost, PathfindingNode* prevNode, int prevDir);
+};
+
+/**
+ * Compares PathfindingNode pointers based on TU cost.
+ */
+class MinNodeCosts
+{
+public:
+	/**
+	 * Compares nodes @a *a and @a *b.
+	 * @param a Pointer to first node.
+	 * @param b Pointer to second node.
+	 * @return True if node @a *a must come before @a *b.
+	 */
+	bool operator()(const PathfindingNode *a, const PathfindingNode *b) const
+	{
+		return a->getTUCost(false) < b->getTUCost(false);
+	}
 };
 
 }
-
-#endif

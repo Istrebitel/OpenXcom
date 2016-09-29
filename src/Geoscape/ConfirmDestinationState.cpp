@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,13 +17,9 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ConfirmDestinationState.h"
-#include <sstream>
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
-#include "../Engine/Surface.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
@@ -31,6 +27,8 @@
 #include "../Savegame/Craft.h"
 #include "../Savegame/Target.h"
 #include "../Savegame/Waypoint.h"
+#include "../Savegame/Base.h"
+#include "../Engine/Options.h"
 
 namespace OpenXcom
 {
@@ -41,57 +39,50 @@ namespace OpenXcom
  * @param craft Pointer to the craft to retarget.
  * @param target Pointer to the selected target (NULL if it's just a point on the globe).
  */
-ConfirmDestinationState::ConfirmDestinationState(Game *game, Craft *craft, Target *target) : State(game), _craft(craft), _target(target)
+ConfirmDestinationState::ConfirmDestinationState(Craft *craft, Target *target) : _craft(craft), _target(target)
 {
 	Waypoint *w = dynamic_cast<Waypoint*>(_target);
 	_screen = false;
 
 	// Create objects
-	_window = new Window(this, 224, 72, 16, 64);
+	_window = new Window(this, 244, 72, 6, 64);
 	_btnOk = new TextButton(50, 12, 68, 104);
 	_btnCancel = new TextButton(50, 12, 138, 104);
-	_txtTarget = new Text(214, 16, 21, 80);
+	_txtTarget = new Text(232, 32, 12, 72);
 
 	// Set palette
-	if (w != 0 && w->getId() == 0)
-	{
-		_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(6)), Palette::backPos, 16);
-	}
-	else
-	{
-		_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(4)), Palette::backPos, 16);
-	}
-	
-	add(_window);
-	add(_btnOk);
-	add(_btnCancel);
-	add(_txtTarget);
-	
+	setInterface("confirmDestination", w != 0 && w->getId() == 0);
+
+	add(_window, "window", "confirmDestination");
+	add(_btnOk, "button", "confirmDestination");
+	add(_btnCancel, "button", "confirmDestination");
+	add(_txtTarget, "text", "confirmDestination");
+
+	centerAllSurfaces();
+
 	// Set up objects
-	_window->setColor(Palette::blockOffset(15)+2);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK12.SCR"));
+	_window->setBackground(_game->getMod()->getSurface("BACK12.SCR"));
 
-	_btnOk->setColor(Palette::blockOffset(8)+8);
-	_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&ConfirmDestinationState::btnOkClick);
+	_btnOk->onKeyboardPress((ActionHandler)&ConfirmDestinationState::btnOkClick, Options::keyOk);
 
-	_btnCancel->setColor(Palette::blockOffset(8)+8);
-	_btnCancel->setText(_game->getLanguage()->getString("STR_CANCEL_UC"));
+	_btnCancel->setText(tr("STR_CANCEL_UC"));
 	_btnCancel->onMouseClick((ActionHandler)&ConfirmDestinationState::btnCancelClick);
+	_btnCancel->onKeyboardPress((ActionHandler)&ConfirmDestinationState::btnCancelClick, Options::keyCancel);
 
-	_txtTarget->setColor(Palette::blockOffset(15)-1);
 	_txtTarget->setBig();
 	_txtTarget->setAlign(ALIGN_CENTER);
-	std::wstringstream ss;
+	_txtTarget->setVerticalAlign(ALIGN_MIDDLE);
+	_txtTarget->setWordWrap(true);
 	if (w != 0 && w->getId() == 0)
 	{
-		ss << _game->getLanguage()->getString("STR_TARGET_WAY_POINT");
+		_txtTarget->setText(tr("STR_TARGET").arg(tr("STR_WAY_POINT")));
 	}
 	else
 	{
-		ss << _game->getLanguage()->getString("STR_TARGET") << _target->getName(_game->getLanguage());
+		_txtTarget->setText(tr("STR_TARGET").arg(_target->getName(_game->getLanguage())));
 	}
-	_txtTarget->setText(ss.str());
 }
 
 /**
@@ -99,24 +90,38 @@ ConfirmDestinationState::ConfirmDestinationState(Game *game, Craft *craft, Targe
  */
 ConfirmDestinationState::~ConfirmDestinationState()
 {
-	
+
 }
 
 /**
  * Confirms the selected target for the craft.
  * @param action Pointer to an action.
  */
-void ConfirmDestinationState::btnOkClick(Action *action)
+void ConfirmDestinationState::btnOkClick(Action *)
 {
 	Waypoint *w = dynamic_cast<Waypoint*>(_target);
 	if (w != 0 && w->getId() == 0)
 	{
-		w->setId(*_game->getSavedGame()->getWaypointId());
-		(*_game->getSavedGame()->getWaypointId())++;
+		w->setId(_game->getSavedGame()->getId("STR_WAYPOINT"));
 		_game->getSavedGame()->getWaypoints()->push_back(w);
 	}
 	_craft->setDestination(_target);
 	_craft->setStatus("STR_OUT");
+	if (_craft->getInterceptionOrder() == 0)
+	{
+		int maxInterceptionOrder = 0;
+		for (std::vector<Base*>::iterator baseIt = _game->getSavedGame()->getBases()->begin(); baseIt != _game->getSavedGame()->getBases()->end(); ++baseIt)
+		{
+			for (std::vector<Craft*>::iterator craftIt = (*baseIt)->getCrafts()->begin(); craftIt != (*baseIt)->getCrafts()->end(); ++craftIt)
+			{
+				if ((*craftIt)->getInterceptionOrder() > maxInterceptionOrder)
+				{
+					maxInterceptionOrder = (*craftIt)->getInterceptionOrder();
+				}
+			}
+		}
+		_craft->setInterceptionOrder(++maxInterceptionOrder);
+	}
 	_game->popState();
 	_game->popState();
 }
@@ -125,7 +130,7 @@ void ConfirmDestinationState::btnOkClick(Action *action)
  * Returns to the previous screen.
  * @param action Pointer to an action.
  */
-void ConfirmDestinationState::btnCancelClick(Action *action)
+void ConfirmDestinationState::btnCancelClick(Action *)
 {
 	Waypoint *w = dynamic_cast<Waypoint*>(_target);
 	if (w != 0 && w->getId() == 0)

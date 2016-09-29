@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,10 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENXCOM_CATFILE_H
-#define OPENXCOM_CATFILE_H
-
 #include <fstream>
 
 namespace OpenXcom
@@ -53,9 +50,7 @@ public:
 		return (i < _amount) ? _size[i] : 0;
 	}
 	/// Load an object into memory.
-	char *load(unsigned int i);
+	char *load(unsigned int i, bool name = false);
 };
 
 }
-
-#endif

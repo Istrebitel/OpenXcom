@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,18 +17,17 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_ACTIONMENUITEM_H
-#define OPENXCOM_ACTIONMENUITEM_H
-
 #include "../Engine/InteractiveSurface.h"
-#include "BattlescapeState.h"
+#include "BattlescapeGame.h"
 
 namespace OpenXcom
 {
 
-class BattleItem;
-class State;
+class Game;
 class Font;
+class Language;
+class Text;
+class Frame;
 
 /**
  * A class that represents a single box in the action popup menu on the battlescape.
@@ -37,25 +37,25 @@ class Font;
 class ActionMenuItem : public InteractiveSurface
 {
 private:
-	int _id;
 	bool _highlighted;
 	BattleActionType _action;
-	int _tu;
+	int _tu, _highlightModifier;
+	Frame *_frame;
 	Text *_txtDescription, *_txtAcc, *_txtTU;
 public:
 	/// Creates a new ActionMenuItem.
-	ActionMenuItem(State *state, int id, Font *bigFont);
+	ActionMenuItem(int id, Game *game, int x, int y);
 	/// Cleans up the ActionMenuItem.
 	~ActionMenuItem();
-	/// Assign an action to it.
-	void setAction(BattleActionType action, std::wstring description, std::wstring accuracy, std::wstring timeunits, int tu);
-	/// Get the assigned action.
-	BattleActionType getAction();
-	/// Get the assigned action TUs.
-	int getTUs();
-	/// Set the palettes.
+	/// Assigns an action to it.
+	void setAction(BattleActionType action, const std::wstring &description, const std::wstring &accuracy, const std::wstring &timeunits, int tu);
+	/// Gets the assigned action.
+	BattleActionType getAction() const;
+	/// Gets the assigned action TUs.
+	int getTUs() const;
+	/// Sets the palettes.
 	void setPalette(SDL_Color *colors, int firstcolor, int ncolors);
-	/// Redraw it.
+	/// Redraws it.
 	void draw();
 	/// Processes a mouse hover in event.
 	void mouseIn(Action *action, State *state);
@@ -65,5 +65,3 @@ public:
 };
 
 }
-
-#endif

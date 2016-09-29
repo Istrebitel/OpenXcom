@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -17,12 +17,11 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "CraftArmorState.h"
-#include <string>
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
+#include "../Engine/Options.h"
+#include "../Engine/Action.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
@@ -30,8 +29,12 @@
 #include "../Savegame/Base.h"
 #include "../Savegame/Soldier.h"
 #include "../Savegame/Craft.h"
-#include "../Ruleset/RuleCraft.h"
+#include "../Mod/Armor.h"
 #include "SoldierArmorState.h"
+#include "../Savegame/SavedGame.h"
+#include "../Savegame/ItemContainer.h"
+#include "../Mod/RuleInterface.h"
+#include "../Mod/RuleSoldier.h"
 
 namespace OpenXcom
 {
@@ -42,91 +45,76 @@ namespace OpenXcom
  * @param base Pointer to the base to get info from.
  * @param craft ID of the selected craft.
  */
-CraftArmorState::CraftArmorState(Game *game, Base *base, unsigned int craft) : State(game), _base(base), _craft(craft)
+CraftArmorState::CraftArmorState(Base *base, size_t craft) : _base(base), _craft(craft)
 {
 	// Create objects
 	_window = new Window(this, 320, 200, 0, 0);
 	_btnOk = new TextButton(288, 16, 16, 176);
-	_txtTitle = new Text(300, 16, 16, 7);
+	_txtTitle = new Text(300, 17, 16, 7);
 	_txtName = new Text(114, 9, 16, 32);
-	_txtCraft = new Text(70, 9, 130, 32);
-	_txtArmor = new Text(100, 9, 200, 32);
-	_lstSoldiers = new TextList(288, 128, 8, 40);
+	_txtCraft = new Text(76, 9, 130, 32);
+	_txtArmor = new Text(100, 9, 199, 32);
+	_lstSoldiers = new TextList(292, 128, 8, 40);
 
 	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(4)), Palette::backPos, 16);
+	setInterface("craftArmor");
 
-	add(_window);
-	add(_btnOk);
-	add(_txtTitle);
-	add(_txtName);
-	add(_txtCraft);
-	add(_txtArmor);
-	add(_lstSoldiers);
+	add(_window, "window", "craftArmor");
+	add(_btnOk, "button", "craftArmor");
+	add(_txtTitle, "text", "craftArmor");
+	add(_txtName, "text", "craftArmor");
+	add(_txtCraft, "text", "craftArmor");
+	add(_txtArmor, "text", "craftArmor");
+	add(_lstSoldiers, "list", "craftArmor");
+
+	centerAllSurfaces();
 
 	// Set up objects
-	_window->setColor(Palette::blockOffset(13)+13);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK14.SCR"));
+	_window->setBackground(_game->getMod()->getSurface("BACK14.SCR"));
 
-	_btnOk->setColor(Palette::blockOffset(13)+13);
-	_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&CraftArmorState::btnOkClick);
+	_btnOk->onKeyboardPress((ActionHandler)&CraftArmorState::btnOkClick, Options::keyCancel);
 
-	_txtTitle->setColor(Palette::blockOffset(13)+10);
 	_txtTitle->setBig();
-	_txtTitle->setText(_game->getLanguage()->getString("STR_SELECT_ARMOR"));
+	_txtTitle->setText(tr("STR_SELECT_ARMOR"));
 
-	_txtName->setColor(Palette::blockOffset(13)+10);
-	_txtName->setText(_game->getLanguage()->getString("STR_NAME_UC"));
+	_txtName->setText(tr("STR_NAME_UC"));
 
-	_txtCraft->setColor(Palette::blockOffset(13)+10);
-	_txtCraft->setText(_game->getLanguage()->getString("STR_CRAFT"));
+	_txtCraft->setText(tr("STR_CRAFT"));
 
-	_txtArmor->setColor(Palette::blockOffset(13)+10);
-	_txtArmor->setText(_game->getLanguage()->getString("STR_ARMOR"));
+	_txtArmor->setText(tr("STR_ARMOR"));
 
-	_lstSoldiers->setColor(Palette::blockOffset(13)+10);
-	_lstSoldiers->setArrowColor(Palette::blockOffset(13)+13);
-	_lstSoldiers->setColumns(3, 114, 70, 96);
+	_lstSoldiers->setColumns(3, 114, 69, 101);
 	_lstSoldiers->setSelectable(true);
 	_lstSoldiers->setBackground(_window);
 	_lstSoldiers->setMargin(8);
-	_lstSoldiers->onMouseClick((ActionHandler)&CraftArmorState::lstSoldiersClick);
+	_lstSoldiers->setScrolling(true, 0);
+	_lstSoldiers->onMousePress((ActionHandler)&CraftArmorState::lstSoldiersClick);
 
+	Uint8 otherCraftColor = _game->getMod()->getInterface("craftArmor")->getElement("otherCraft")->color;
 	int row = 0;
 	Craft *c = _base->getCrafts()->at(_craft);
 	for (std::vector<Soldier*>::iterator i = _base->getSoldiers()->begin(); i != _base->getSoldiers()->end(); ++i)
 	{
-		std::wstring s;
-		if ((*i)->getCraft() == 0)
-		{
-			s = _game->getLanguage()->getString("STR_NONE_UC");
-		}
-		else
-		{
-			s = (*i)->getCraft()->getName(_game->getLanguage());
-		}
-		_lstSoldiers->addRow(3, (*i)->getName().c_str(), s.c_str(), _game->getLanguage()->getString("STR_NONE_UC").c_str());
+		_lstSoldiers->addRow(3, (*i)->getName(true).c_str(), (*i)->getCraftString(_game->getLanguage()).c_str(), tr((*i)->getArmor()->getType()).c_str());
 
 		Uint8 color;
 		if ((*i)->getCraft() == c)
 		{
-			color = Palette::blockOffset(13);
+			color = _lstSoldiers->getSecondaryColor();
 		}
 		else if ((*i)->getCraft() != 0)
 		{
-			color = Palette::blockOffset(15)+6;
+			color = otherCraftColor;
 		}
 		else
 		{
-			color = Palette::blockOffset(13)+10;
+			color = _lstSoldiers->getColor();
 		}
-		_lstSoldiers->getCell(row, 0)->setColor(color);
-		_lstSoldiers->getCell(row, 1)->setColor(color);
-		_lstSoldiers->getCell(row, 2)->setColor(color);
+		_lstSoldiers->setRowColor(row, color);
 		row++;
 	}
-	_lstSoldiers->draw();
 }
 
 /**
@@ -137,10 +125,25 @@ CraftArmorState::~CraftArmorState()
 }
 
 /**
+ * The soldier armors can change
+ * after going into other screens.
+ */
+void CraftArmorState::init()
+{
+	State::init();
+	int row = 0;
+	for (std::vector<Soldier*>::iterator i = _base->getSoldiers()->begin(); i != _base->getSoldiers()->end(); ++i)
+	{
+		_lstSoldiers->setCellText(row, 2, tr((*i)->getArmor()->getType()));
+		row++;
+	}
+}
+
+/**
  * Returns to the previous screen.
  * @param action Pointer to an action.
  */
-void CraftArmorState::btnOkClick(Action *action)
+void CraftArmorState::btnOkClick(Action *)
 {
 	_game->popState();
 }
@@ -151,7 +154,45 @@ void CraftArmorState::btnOkClick(Action *action)
  */
 void CraftArmorState::lstSoldiersClick(Action *action)
 {
-	_game->pushState(new SoldierArmorState(_game, _base, _lstSoldiers->getSelectedRow()));
+	Soldier *s = _base->getSoldiers()->at(_lstSoldiers->getSelectedRow());
+	if (!(s->getCraft() && s->getCraft()->getStatus() == "STR_OUT"))
+	{
+		if (action->getDetails()->button.button == SDL_BUTTON_LEFT)
+		{
+			_game->pushState(new SoldierArmorState(_base, _lstSoldiers->getSelectedRow()));
+		}
+		else if (action->getDetails()->button.button == SDL_BUTTON_RIGHT)
+		{
+			SavedGame *save;
+			save = _game->getSavedGame();
+			Armor *a = _game->getMod()->getArmor(save->getLastSelectedArmor());
+			if (a->getUnits().empty() || std::find(a->getUnits().begin(), a->getUnits().end(), s->getRules()->getType()) != a->getUnits().end())
+			{
+				if (save->getMonthsPassed() != -1)
+				{
+					if (_base->getStorageItems()->getItem(a->getStoreItem()) > 0 || a->getStoreItem() == Armor::NONE)
+					{
+						if (s->getArmor()->getStoreItem() != Armor::NONE)
+						{
+							_base->getStorageItems()->addItem(s->getArmor()->getStoreItem());
+						}
+						if (a->getStoreItem() != Armor::NONE)
+						{
+							_base->getStorageItems()->removeItem(a->getStoreItem());
+						}
+
+						s->setArmor(a);
+						_lstSoldiers->setCellText(_lstSoldiers->getSelectedRow(), 2, tr(a->getType()));
+					}
+				}
+				else
+				{
+					s->setArmor(a);
+					_lstSoldiers->setCellText(_lstSoldiers->getSelectedRow(), 2, tr(a->getType()));
+				}
+			}
+		}
+	}
 }
 
 }

@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,12 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_WAYPOINT_H
-#define OPENXCOM_WAYPOINT_H
-
 #include "Target.h"
 #include <string>
-#include "yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -41,17 +39,17 @@ public:
 	/// Loads the waypoint from YAML.
 	void load(const YAML::Node& node);
 	/// Saves the waypoint to YAML.
-	void save(YAML::Emitter& out) const;
+	YAML::Node save() const;
 	/// Saves the waypoint's ID to YAML.
-	void saveId(YAML::Emitter& out) const;
+	YAML::Node saveId() const;
 	/// Gets the waypoint's ID.
 	int getId() const;
 	/// Sets the waypoint's ID.
 	void setId(int id);
-	/// Gets the waypoint's name.
-	std::wstring getName(Language *lang) const;
+	/// Gets the waypoint's default name.
+	std::wstring getDefaultName(Language *lang) const;
+	/// Gets the waypoint's marker.
+	int getMarker() const;
 };
 
 }
-
-#endif

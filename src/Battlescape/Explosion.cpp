@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -21,13 +21,17 @@
 namespace OpenXcom
 {
 
+const int Explosion::HIT_FRAMES = 4;
+const int Explosion::EXPLODE_FRAMES = 8;
+const int Explosion::BULLET_FRAMES = 10;
 /**
  * Sets up a Explosion sprite with the specified size and position.
  * @param position Explosion center position in voxel x/y/z.
  * @param startFrame A startframe - can be used to offset different explosions at different frames.
- * @param big Flag to indicate it is a bullet hit(false), or a real explosion(true).
+ * @param big Flag to indicate it is a bullet hit (false), or a real explosion (true).
+ * @param hit True for melee and psi attacks.
  */
-Explosion::Explosion(Position position, int startFrame, bool big) : _position(position), _currentFrame(startFrame), _startFrame(startFrame), _big(big)
+Explosion::Explosion(Position position, int startFrame, int frameDelay, bool big, bool hit) : _position(position), _currentFrame(startFrame), _startFrame(startFrame), _frameDelay(frameDelay), _big(big), _hit(hit)
 {
 
 }
@@ -40,15 +44,22 @@ Explosion::~Explosion()
 
 }
 
-
 /**
- * Animate the explosion further.
- * @return false if the animation is finished.
+ * Animates the explosion further.
+ * @return false If the animation is finished.
  */
 bool Explosion::animate()
 {
+	if (_frameDelay > 0)
+	{
+		_frameDelay--;
+		return true;
+	}
+
 	_currentFrame++;
-	if ((_big && _currentFrame == 8) || (!_big && _currentFrame == _startFrame+10))
+	if ((_hit && _currentFrame == _startFrame + HIT_FRAMES) ||
+		(_big && _currentFrame == _startFrame + EXPLODE_FRAMES) ||
+		(!_big && !_hit && _currentFrame == _startFrame + BULLET_FRAMES))
 	{
 		return false;
 	}
@@ -59,8 +70,7 @@ bool Explosion::animate()
 }
 
 /**
- * Get the current position in voxel space.
- * @param offset
+ * Gets the current position in voxel space.
  * @return position in voxel space.
  */
 Position Explosion::getPosition() const
@@ -69,21 +79,32 @@ Position Explosion::getPosition() const
 }
 
 /**
- * Get the current frame in the animation.
+ * Gets the current frame in the animation.
  * @return frame number.
  */
-int Explosion::getCurrentFrame()
+int Explosion::getCurrentFrame() const
 {
+	if (_frameDelay > 0)
+		return -1;
 	return _currentFrame;
 }
 
 /**
- * Return flag to indicate it is a bullet hit(false), or a real explosion(true).
- * @return big
+ * Returns flag to indicate if it is a bullet hit (false), or a real explosion (true).
+ * @return True if it is a real explosion, false if it is a bullet hit.
  */
-bool Explosion::isBig()
+bool Explosion::isBig() const
 {
 	return _big;
+}
+
+/**
+ * Returns flag to indicate if it is a melee or psi hit.
+ * @return True if it is a melee hit or psi hit.
+ */
+bool Explosion::isHit() const
+{
+	return _hit;
 }
 
 }

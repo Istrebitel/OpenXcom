@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,11 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_REGION_H
-#define OPENXCOM_REGION_H
-
 #include <vector>
-#include "yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace OpenXcom
 {
@@ -36,7 +34,7 @@ class Region
 {
 private:
 	RuleRegion *_rules;
-	int _activityXcom, _activityAlien;
+	std::vector<int> _activityXcom, _activityAlien;
 public:
 	/// Creates a new region of the specified type.
 	Region(RuleRegion *rules);
@@ -45,11 +43,19 @@ public:
 	/// Loads the region from YAML.
 	void load(const YAML::Node& node);
 	/// Saves the region to YAML.
-	void save(YAML::Emitter& out) const;
+	YAML::Node save() const;
 	/// Gets the region's ruleset.
-	RuleRegion *const getRules() const;
+	RuleRegion *getRules() const;
+	/// add xcom activity in this region
+	void addActivityXcom(int activity);
+	/// add alien activity in this region
+	void addActivityAlien(int activity);
+	/// get xcom activity to this region
+	std::vector<int> &getActivityXcom();
+	/// get xcom activity to this region
+	std::vector<int> &getActivityAlien();
+	/// start new month of activity
+	void newMonth();
 };
 
 }
-
-#endif

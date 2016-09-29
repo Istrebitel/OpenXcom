@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,15 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_BATTLESTATE_H
-#define OPENXCOM_BATTLESTATE_H
-
-#include <string>
+#include "BattlescapeGame.h"
 
 namespace OpenXcom
 {
-
-class BattlescapeState;
 
 /**
  * This class sets the battlescape in a certain sub-state.
@@ -33,23 +29,23 @@ class BattlescapeState;
 class BattleState
 {
 protected:
-	BattlescapeState *_parent;
-	std::string _result;
+	BattlescapeGame *_parent;
+	BattleAction _action;
 public:
 	/// Creates a new BattleState linked to the game.
-	BattleState(BattlescapeState *parent);
+	BattleState(BattlescapeGame *parent, BattleAction action);
+	/// Creates a new BattleState linked to the game.
+	BattleState(BattlescapeGame *parent);
 	/// Cleans up the BattleState.
 	virtual ~BattleState();
 	/// Initializes the state.
 	virtual void init();
-	/// Handles a cancels request.
+	/// Handles a cancel request.
 	virtual void cancel();
 	/// Runs state functionality every cycle.
 	virtual void think();
-	/// Get the result of the state.
-	std::string getResult() const;
+	/// Gets a copy of the action.
+	BattleAction getAction() const;
 };
 
 }
-
-#endif

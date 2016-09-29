@@ -1,5 +1,6 @@
+#pragma once
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -16,21 +17,23 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenXcom.  If not, see <http:///www.gnu.org/licenses/>.
  */
-#ifndef OPENXCOM_GEOSCAPESTATE_H
-#define OPENXCOM_GEOSCAPESTATE_H
-
 #include "../Engine/State.h"
-#include <vector>
+#include <list>
 
 namespace OpenXcom
 {
 
 class Surface;
 class Globe;
-class ImageButton;
+class TextButton;
 class InteractiveSurface;
 class Text;
 class Timer;
+class DogfightState;
+class Ufo;
+class MissionSite;
+class Base;
+class RuleMissionScript;
 
 /**
  * Geoscape screen which shows an overview of
@@ -39,26 +42,32 @@ class Timer;
 class GeoscapeState : public State
 {
 private:
-	Surface *_bg;
+	Surface *_bg, *_sideLine, *_sidebar;
 	Globe *_globe;
-	ImageButton *_btnIntercept, *_btnBases, *_btnGraphs, *_btnUfopaedia, *_btnOptions, *_btnFunding;
-	ImageButton *_timeSpeed;
-	ImageButton *_btn5Secs, *_btn1Min, *_btn5Mins, *_btn30Mins, *_btn1Hour, *_btn1Day;
+	TextButton *_btnIntercept, *_btnBases, *_btnGraphs, *_btnUfopaedia, *_btnOptions, *_btnFunding;
+	TextButton *_timeSpeed;
+	TextButton *_btn5Secs, *_btn1Min, *_btn5Mins, *_btn30Mins, *_btn1Hour, *_btn1Day;
+	TextButton *_sideTop, *_sideBottom;
 	InteractiveSurface *_btnRotateLeft, *_btnRotateRight, *_btnRotateUp, *_btnRotateDown, *_btnZoomIn, *_btnZoomOut;
-	Text *_txtHour, *_txtHourSep, *_txtMin, *_txtMinSep, *_txtSec, *_txtWeekday, *_txtDay, *_txtMonth, *_txtYear;
-	Timer *_timer;
-	bool _pause, _music;
-	std::vector<State*> _popups;
+	Text *_txtFunds, *_txtHour, *_txtHourSep, *_txtMin, *_txtMinSep, *_txtSec, *_txtWeekday, *_txtDay, *_txtMonth, *_txtYear;
+	Timer *_gameTimer, *_zoomInEffectTimer, *_zoomOutEffectTimer, *_dogfightStartTimer, *_dogfightTimer;
+	bool _pause, _zoomInEffectDone, _zoomOutEffectDone;
+	Text *_txtDebug;
+	std::list<State*> _popups;
+	std::list<DogfightState*> _dogfights, _dogfightsToBeStarted;
+	size_t _minimizedDogfights;
 public:
 	/// Creates the Geoscape state.
-	GeoscapeState(Game *game);
+	GeoscapeState();
 	/// Cleans up the Geoscape state.
 	~GeoscapeState();
+	/// Handle keypresses.
+	void handle(Action *action);
 	/// Updates the palette and timer.
 	void init();
 	/// Runs the timer.
 	void think();
-	/// Displays the game time/date.
+	/// Displays the game time/date. (+Funds)
 	void timeDisplay();
 	/// Advances the game timer.
 	void timeAdvance();
@@ -79,7 +88,7 @@ public:
 	/// Displays a popup window.
 	void popup(State *state);
 	/// Gets the Geoscape globe.
-	Globe *const getGlobe() const;
+	Globe *getGlobe() const;
 	/// Handler for clicking the globe.
 	void globeClick(Action *action);
 	/// Handler for clicking the Intercept button.
@@ -110,12 +119,41 @@ public:
 	void btnRotateDownPress(Action *action);
 	/// Handler for releasing the Rotate Down arrow.
 	void btnRotateDownRelease(Action *action);
-	/// Handler for clicking the Zoom In icon.
-	void btnZoomInClick(Action *action);
-	/// Handler for clicking the Zoom Out icon.
-	void btnZoomOutClick(Action *action);
+	/// Handler for left-clicking the Zoom In icon.
+	void btnZoomInLeftClick(Action *action);
+	/// Handler for right-clicking the Zoom In icon.
+	void btnZoomInRightClick(Action *action);
+	/// Handler for left-clicking the Zoom Out icon.
+	void btnZoomOutLeftClick(Action *action);
+	/// Handler for right-clicking the Zoom Out icon.
+	void btnZoomOutRightClick(Action *action);
+	/// Blit method - renders the state and dogfights.
+	void blit();
+	/// Globe zoom in effect for dogfights.
+	void zoomInEffect();
+	/// Globe zoom out effect for dogfights.
+	void zoomOutEffect();
+	/// Multi-dogfights logic handling.
+	void handleDogfights();
+	/// Gets the number of minimized dogfights.
+	int minimizedDogfightsCount();
+	/// Starts a new dogfight.
+	void startDogfight();
+	/// Get first free dogfight slot.
+	int getFirstFreeDogfightSlot();
+	/// Handler for clicking the timer button.
+	void btnTimerClick(Action *action);
+	/// Process a mission site
+	bool processMissionSite(MissionSite *site) const;
+	/// Handles base defense
+	void handleBaseDefense(Base *base, Ufo *ufo);
+	/// Update the resolution settings, we just resized the window.
+	void resize(int &dX, int &dY);
+private:
+	/// Handle alien mission generation.
+	void determineAlienMissions();
+	/// Process each individual mission script command.
+	bool processCommand(RuleMissionScript *command);
 };
 
 }
-
-#endif

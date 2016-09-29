@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 OpenXcom Developers.
+ * Copyright 2010-2016 OpenXcom Developers.
  *
  * This file is part of OpenXcom.
  *
@@ -18,13 +18,12 @@
  */
 #include "UfoLostState.h"
 #include "../Engine/Game.h"
-#include "../Resource/ResourcePack.h"
-#include "../Engine/Language.h"
-#include "../Engine/Font.h"
-#include "../Engine/Palette.h"
+#include "../Mod/Mod.h"
+#include "../Engine/LocalizedText.h"
 #include "../Interface/TextButton.h"
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
+#include "../Engine/Options.h"
 
 namespace OpenXcom
 {
@@ -34,36 +33,37 @@ namespace OpenXcom
  * @param game Pointer to the core game.
  * @param id Name of the UFO.
  */
-UfoLostState::UfoLostState(Game *game, std::wstring id) : State(game), _id(id)
+UfoLostState::UfoLostState(const std::wstring &id) : _id(id)
 {
 	_screen = false;
 
 	// Create objects
 	_window = new Window(this, 192, 104, 32, 48, POPUP_BOTH);
 	_btnOk = new TextButton(60, 12, 98, 112);
-	_txtTitle = new Text(160, 30, 48, 72);
-	
-	// Set palette
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(7)), Palette::backPos, 16);
+	_txtTitle = new Text(160, 32, 48, 72);
 
-	add(_window);
-	add(_btnOk);
-	add(_txtTitle);
+	// Set palette
+	setInterface("UFOInfo");
+
+	add(_window, "window", "UFOInfo");
+	add(_btnOk, "button", "UFOInfo");
+	add(_txtTitle, "text", "UFOInfo");
+
+	centerAllSurfaces();
 
 	// Set up objects
-	_window->setColor(Palette::blockOffset(8)+8);
-	_window->setBackground(_game->getResourcePack()->getSurface("BACK15.SCR"));
+	_window->setBackground(_game->getMod()->getSurface("BACK15.SCR"));
 
-	_btnOk->setColor(Palette::blockOffset(8)+8);
-	_btnOk->setText(_game->getLanguage()->getString("STR_OK"));
+	_btnOk->setText(tr("STR_OK"));
 	_btnOk->onMouseClick((ActionHandler)&UfoLostState::btnOkClick);
+	_btnOk->onKeyboardPress((ActionHandler)&UfoLostState::btnOkClick, Options::keyOk);
+	_btnOk->onKeyboardPress((ActionHandler)&UfoLostState::btnOkClick, Options::keyCancel);
 
-	_txtTitle->setColor(Palette::blockOffset(8)+5);
 	_txtTitle->setBig();
 	_txtTitle->setAlign(ALIGN_CENTER);
 	std::wstring s = _id;
 	s += L'\n';
-	s += _game->getLanguage()->getString("STR_TRACKING_LOST");
+	s += tr("STR_TRACKING_LOST");
 	_txtTitle->setText(s);
 }
 
@@ -72,22 +72,14 @@ UfoLostState::UfoLostState(Game *game, std::wstring id) : State(game), _id(id)
  */
 UfoLostState::~UfoLostState()
 {
-	
-}
 
-/**
- * Resets the palette.
- */
-void UfoLostState::init()
-{
-	_game->setPalette(_game->getResourcePack()->getPalette("BACKPALS.DAT")->getColors(Palette::blockOffset(7)), Palette::backPos, 16);
 }
 
 /**
  * Returns to the previous screen.
  * @param action Pointer to an action.
  */
-void UfoLostState::btnOkClick(Action *action)
+void UfoLostState::btnOkClick(Action *)
 {
 	_game->popState();
 }
